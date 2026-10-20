@@ -1,11 +1,11 @@
 {
-  "name": "folio-billing",
+  "name": "refrens-source-recreation",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "python3 -m http.server 4173 --bind 127.0.0.1 --directory dist",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check dist/app.js && node --check dist/data.js && node --check dist/invoice.js"
+    "check": "node --check dist/layout.js && node --check dist/mirror.js && node --check dist/data.js && node --check dist/free-online-invoice-generator/invoice-app.js && node --check dist/free-online-invoice-generator/invoice-public.js"
   }
 }

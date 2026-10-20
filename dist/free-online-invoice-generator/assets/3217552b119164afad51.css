@@ -1,0 +1,8 @@
+@font-face {
+  font-family: 'saudi_riyal';
+  src: url("/free-online-invoice-generator/assets/50cc9b974677f11c8434.woff2") format('woff2'), url("/free-online-invoice-generator/assets/f889c7659da0646aaa06.woff") format('woff'),
+    url("/free-online-invoice-generator/assets/d74aafb9c80b89c9a23a.ttf") format('truetype');
+  font-display: swap;
+  /* the font also maps A-D to empty glyphs; scope it to the Saudi Riyal sign only */
+  unicode-range: U+20C1;
+}

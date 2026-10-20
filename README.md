@@ -1,6 +1,6 @@
-# Folio
+# Refrens public website recreation
 
-An original personal billing workspace inspired by the public Refrens invoice workflow. Built with plain JavaScript, CSS, and native browser dialogs. No application dependencies or build step.
+The current site reproduces the public reference at https://www.refrens.com/ and its public invoice generator. The original Folio interface is archived in `legacy-folio/` and is no longer served as the homepage.
 
 ## Run
 
@@ -8,27 +8,25 @@ An original personal billing workspace inspired by the public Refrens invoice wo
 npm run dev
 ```
 
-Open http://127.0.0.1:4173. The deployable application is in `dist/`.
+Open http://127.0.0.1:4173. The complete deployable presentation is in `dist/`; it has no build step or application package dependencies.
 
 ```sh
 npm run check
 npm test
 ```
 
-## Included
+The calculation/persistence unit suite remains for the retained billing data module. Browser fidelity and interaction checks are recorded separately in `docs/source-fidelity.md` and `docs/invoice-fidelity.md`.
 
-- Monthly dashboard with invoice totals, outstanding balances, overdue amounts and six/three-month revenue charts.
-- Invoice creation/editing, multiple line items, configurable tax, absolute discounts, draft/issued states and derived payment status.
-- Client directory and invoice history, optional GSTIN and business profile.
-- Partial/full payment recording and printable A4 invoice previews. Use the browser print dialog to save as PDF.
-- Search, status filters, pagination, selection and spreadsheet-safe CSV exports.
-- Expense ledger, monthly reports, JSON backup/restore and an explicit clear-workspace action.
-- Responsive desktop/mobile layouts and keyboard-accessible native dialogs.
+## Presentation and interactions
 
-## Your records
+- Source logo, exact public copy, original imagery, Playfair/Satoshi/Inter fonts, purple styling, spacing and section order.
+- Separate captured desktop, tablet and mobile layouts preserve the source's real responsive variants.
+- Product/country menus, mobile navigation, feature and AI tabs, FAQ panels, carousels and video controls.
+- Public invoice-generator presentation and its editable fields/calculations, recreated against the observed source.
+- Presentation assets are served from this project. Original application, analytics and tracking scripts are excluded.
 
-The app starts with fictional sample records for October 2026. Update the business profile in Settings, then use Clear workspace to start your own records. Data is stored in this browser under `folio.workspace.v1`, on this device and origin. Private hosting controls who can open the app; there is no server-side database or cross-device sync. Download a backup from Settings for portability. Restore replaces the current workspace only after confirmation. Storage failures are surfaced and mutations roll back.
+Source destinations outside the reproduced pages retain their official Refrens URLs. Login, registration, demo booking, payment services and authenticated design/share are services on the source website. This project does not provide or impersonate those server-side services. It does not collect account passwords.
 
-Amounts are INR. Taxes are a single configurable percentage after discount. Payments are manually recorded amounts, not bank transactions. The app does not send invoices by email, process payments, perform GST filing, or provide statutory accounting reports. Collections in charts/reports use invoice issue month rather than payment date.
+The existing site project and private audience are preserved. The previous Folio browser data is not cleared or migrated by this presentation change.
 
-Public reference observations, official sources, REA Evidence IDs and investigation limitations are recorded in `docs/reconstruction.md`.
+Investigation evidence and exact verification boundaries are recorded in `docs/source-fidelity.md`.
