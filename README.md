@@ -1,32 +1,19 @@
-# Refrens public website recreation
+# Independent billing workspace
 
-The current site reproduces the public reference at https://www.refrens.com/ and its public invoice generator. The original Folio interface is archived in `legacy-folio/` and is no longer served as the homepage.
+A Refrens-inspired application backed by the owner's Supabase project. The captured public layout is retained; business data, authentication, document generation and workspace routes are implemented independently. This is **not yet a complete Refrens replica**. See [implementation status](docs/IMPLEMENTATION-STATUS.md) and the [six-phase roadmap](docs/IMPLEMENTATION-ROADMAP.md).
 
 ## Run
 
-```sh
-npm run dev
-```
+Node 22.13 or later, `npm ci`, then `npm run dev -- --port 4173`. Open `/dashboard/` for the signed-in workspace, `/settings/` for the business profile, `/services/` for all services and `/free-online-invoice-generator/?document=invoice` for guest PDF creation.
 
-Open http://127.0.0.1:4173. The complete deployable presentation is in `dist/`; it has no build step or application package dependencies.
+`npm test` checks document arithmetic, PDF structure, validation, dashboard aggregation and workflow behavior. `npm run check` checks application JavaScript syntax. The Sites build helper produces the deployable Worker bundle.
 
-```sh
-npm run check
-npm test
-```
+## Supabase
 
-The calculation/persistence unit suite remains for the retained billing data module. Browser fidelity and interaction checks are recorded separately in `docs/source-fidelity.md` and `docs/invoice-fidelity.md`.
+Migrations are in `supabase/migrations/`. The project-specific URL and publishable key are in `lib/supabase.ts`; no service-role or database password is part of the runtime. User sessions are in HttpOnly cookies. Access rules live in Supabase RLS and private Storage policies. Migration and smoke scripts accept privileged test configuration via hidden stdin, never command-line flags or tracked environment files.
 
-## Presentation and interactions
+`202610200001` creates the billing foundation; `002` fixes INSERT-returning visibility; `003` implements transactional conversions; `202610210001` adds profiles and atomic numbering/duplication; `202610210002` hardens workflow checks and immutable IDs. Apply migrations in order to a fresh project. Do not reapply migrations that already ran.
 
-- Source logo, exact public copy, original imagery, Playfair/Satoshi/Inter fonts, purple styling, spacing and section order.
-- Separate captured desktop, tablet and mobile layouts preserve the source's real responsive variants.
-- Product/country menus, mobile navigation, feature and AI tabs, FAQ panels, carousels and video controls.
-- Public invoice-generator presentation and its editable fields/calculations, recreated against the observed source.
-- Presentation assets are served from this project. Original application, analytics and tracking scripts are excluded.
+## Publication
 
-Source destinations outside the reproduced pages retain their official Refrens URLs. Login, registration, demo booking, payment services and authenticated design/share are services on the source website. This project does not provide or impersonate those server-side services. It does not collect account passwords.
-
-The existing site project and private audience are preserved. The previous Folio browser data is not cleared or migrated by this presentation change.
-
-Investigation evidence and exact verification boundaries are recorded in `docs/source-fidelity.md`.
+The existing Sites project identity is retained in `.openai/hosting.json`. Source/public assets are under `public/`, server routes under `app/api/`, and the dashboard uses the framework's React/Recharts client. `dist/` is generated build output and ignored. The existing owner-private audience is preserved.

@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 // Import as a data URL so this buildless module also runs without package.json.
 const source = await readFile(
-  new URL("../dist/data.js", import.meta.url),
+  new URL("../public/data.js", import.meta.url),
   "utf8",
 );
 const data = await import(

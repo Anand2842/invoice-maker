@@ -1,7 +1,0 @@
-/* Narrow repairs for authored source values lost by CSSOM serialization. */
-/* Authored variable border shorthands are lost by CSSOM serialization; restore observed source values. */
-form .jeEnAr,form .cYDTsw{border-width:1px}
-form .hkCzsL{border-width:1px;border-style:solid}
-.local-storage-error{font:14px/20px Arial,sans-serif;color:#9d2433;background:#fff2f3;border:1px solid #e9bec5;padding:12px;border-radius:6px;margin-bottom:16px}
-/* Observed checked variants: restore authored checkmark border lost in CSSOM pending var shorthand. */
-form .RXXMG::after,form .iegBmO::after,[role="dialog"] .RXXMG::after{border:2px solid var(--color-white-100);border-top:0;border-left:0}
