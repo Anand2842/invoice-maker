@@ -1,8 +1,8 @@
-import{identity,json,sb,originAllowed,token,refreshToken,sessionResponse}from'../../../lib/supabase';
+import{readObject,identity,json,sb,originAllowed,token,refreshToken,sessionResponse}from'../../../lib/supabase';
 export async function GET(req:Request){const user=await identity(req);if(user)return json({user:{id:user.id,email:user.email}});if(refreshToken(req)){const r=await sb('/auth/v1/token?grant_type=refresh_token','',{method:'POST',body:JSON.stringify({refresh_token:refreshToken(req)})});if(r.ok)return sessionResponse(req,r.data)}return json({user:null});}
 export async function POST(req:Request){
  if(!originAllowed(req))return json({error:'Origin is not allowed'},403);
- try{const body=await req.json();const action=body.action;
+ try{const body=await readObject(req);const action=body.action;
  if(action==='logout'){if(token(req))await sb('/auth/v1/logout',token(req),{method:'POST'});const r=json({signedOut:true});for(const name of ['billing_access','billing_refresh'])r.headers.append('Set-Cookie',name+'=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0');return r;}
  if(action==='refresh'){const refresh=refreshToken(req);if(!refresh)return json({error:'Please sign in again'},401);const r=await sb('/auth/v1/token?grant_type=refresh_token','',{method:'POST',body:JSON.stringify({refresh_token:refresh})});return r.ok?sessionResponse(req,r.data):json({error:'Your session has expired. Sign in again.'},401);}
  if(!['login','signup','recover'].includes(action))return json({error:'Unsupported action'},400);

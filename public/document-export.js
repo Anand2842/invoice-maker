@@ -1,3 +1,4 @@
+import { templateStyle } from './pdf-templates/index.js';
 /**
  * Dependency-free, local PDF export. Import this module once before calling
  * window.RefrensDocumentExport.{build,download,preview}(document).
@@ -10,7 +11,7 @@
  * Boundaries: standard PDF Helvetica/WinAnsi supports Latin text, not every
  * writing system. Unsupported text is rejected rather than silently corrupted.
  * Currency codes are printed instead of unsupported currency glyphs. Uploaded
- * logo/signature artwork is not embedded; build() returns a visible warning.
+ * logo/signature artwork is embedded by buildWithImages(); build() returns a visible warning.
  * Typed signature names are included. No network requests or print dialogs.
  */
 
@@ -33,7 +34,7 @@ const CP1252 = new Map([
 
 export const boundaries = Object.freeze({
   text: 'Latin text using standard PDF Helvetica/WinAnsi; unsupported scripts are rejected.',
-  images: 'Uploaded logo and signature artwork is not embedded. Typed signatures are supported.',
+  images: 'PNG/JPEG logo and signature artwork is embedded by buildWithImages, preview and download. Synchronous build returns text-only PDF warnings.',
   shipping: 'Shipping is an untaxed charge. Add a taxable shipping line item if tax applies.',
   rounding: 'Line amounts, line discounts and line tax are rounded half-up to two decimal places.',
 });
@@ -196,8 +197,9 @@ function normalize(input) {
     seller: party(input.seller, 'Seller'), buyer: party(input.buyer, 'Buyer'),
     notes: textValue(input.notes, 'Notes'), terms: textValue(input.terms, 'Terms'),
     shipping: input.shipping, transport: input.transport, customFields: input.customFields, taxDetails: input.taxDetails,
-    signature: input.signature, logo: input.logo,
+    signature: input.signature, logo: input.logo, bank: input.bank, template: input.template || 'classic', brandColor: input.brandColor || '#6040a0', embedImages: input.embedImages === true,
   };
+  templateStyle(document.template, document.brandColor);
   if (document.number.length > 200) throw new RangeError('Document number is too long (maximum 200 characters).');
   const totals = { ...Object.fromEntries(Object.entries(minor).map(([key, value]) => [key, value / 100])), minor, quantity: quantityTotal,
     taxGroups: [...groups.values()].sort((a, b) => a.rate - b.rate), currency,
@@ -279,7 +281,7 @@ function wrap(value, width, size = 9, bold = false) {
 
 const n = value => Number(value.toFixed(3));
 class Layout {
-  constructor(doc) { this.doc = doc; this.pages = []; this.y = 0; this.newPage(); }
+  constructor(doc) { this.doc = doc; this.style = templateStyle(doc.template, doc.brandColor); this.imageSlots = []; this.pages = []; this.y = 0; this.newPage(); }
   command(value) { this.pages.at(-1).push(value); }
   text(encoded, x, top, size = 9, bold = false, color = '0.14 0.16 0.22', align = 'left') {
     if (align === 'right') x -= textWidth(encoded, size, bold);
@@ -291,11 +293,20 @@ class Layout {
     this.pages.push([]);
     const continued = this.pages.length > 1;
     this.y = 49;
-    this.text(winAnsi(`${this.doc.title}${continued ? ' - continued' : ''}`), PAGE.margin, this.y, continued ? 15 : 25, true);
+    if (!continued && this.doc.embedImages && this.doc.logo) {
+      this.imageSlots.push({ kind: 'logo', page: 0, x: PAGE.margin, top: 28, width: 150, height: 56 });
+      this.y = 112;
+    }
+    const modern = this.style.id === 'modern';
+    const numberLines = wrap(`Document no. ${this.doc.number}`, CONTENT_WIDTH - (modern ? 24 : 0), 10, true);
+    if (modern) this.rect(PAGE.margin, this.y - 26, CONTENT_WIDTH, (continued ? 48 : 53) + numberLines.length * 13, this.style.accent);
+    const x = PAGE.margin + (modern ? 12 : 0);
+    const color = modern ? this.style.foreground : this.style.accent;
+    this.text(winAnsi(`${this.doc.title}${continued ? ' - continued' : ''}`), x, this.y, continued ? 15 : this.style.id === 'minimal' ? 22 : 25, true, color);
     this.y += continued ? 21 : 26;
-    for (const line of wrap(`Document no. ${this.doc.number}`, CONTENT_WIDTH, 10, true)) { this.text(line, PAGE.margin, this.y, 10, true); this.y += 13; }
-    this.line(this.y + 2, '0.39 0.27 0.73');
-    this.y += 22;
+    for (const line of numberLines) { this.text(line, x, this.y, 10, true, color); this.y += 13; }
+    if (!modern) this.line(this.y + 2, this.style.accent);
+    this.y += modern ? 28 : 22;
   }
   ensure(height) { if (this.y + height > PAGE.bottom) this.newPage(); }
   paragraph(value, { size = 9, bold = false, color, width = CONTENT_WIDTH, gap = 7 } = {}) {
@@ -323,7 +334,7 @@ function partyLines(value, width) {
 }
 
 function renderParties(layout, doc) {
-  const labels = doc.type === 'purchase-order' ? ['Buyer', 'Vendor'] : doc.type === 'delivery-challan' ? ['From', 'Deliver to'] : doc.type === 'commercial-invoice' ? ['Exporter', 'Consignee'] : ['Billed by', 'Billed to'];
+  const labels = doc.type === 'purchase-order' ? ['Vendor', 'Buyer'] : doc.type === 'delivery-challan' ? ['From', 'Deliver to'] : doc.type === 'commercial-invoice' ? ['Exporter', 'Consignee'] : ['Billed by', 'Billed to'];
   const gap = 28;
   const column = (CONTENT_WIDTH - gap) / 2;
   const right = PAGE.margin + column + gap;
@@ -375,7 +386,7 @@ function renderDetails(layout, doc) {
 
 function tableHeader(layout, delivery) {
   layout.ensure(55);
-  layout.rect(PAGE.margin, layout.y, CONTENT_WIDTH, 25, '0.94 0.93 0.98');
+  layout.rect(PAGE.margin, layout.y, CONTENT_WIDTH, 25, layout.style.tint);
   layout.text('#', PAGE.margin + 6, layout.y + 16, 8, true);
   layout.text('ITEM / DESCRIPTION', PAGE.margin + 26, layout.y + 16, 8, true);
   layout.text('QTY', delivery ? PAGE.width - PAGE.margin - 10 : 318, layout.y + 16, 8, true, undefined, 'right');
@@ -434,7 +445,7 @@ function renderItems(layout, doc) {
 function totalLine(layout, label, amount, currency, final = false) {
   const value = money(amount, currency);
   layout.ensure(final ? 40 : 24);
-  if (final) { layout.rect(PAGE.margin, layout.y, CONTENT_WIDTH, 34, '0.94 0.93 0.98'); layout.y += 5; }
+  if (final) { layout.rect(PAGE.margin, layout.y, CONTENT_WIDTH, 34, layout.style.tint); layout.y += 5; }
   const size = final ? 13 : 10;
   layout.text(winAnsi(label), PAGE.margin + (final ? 10 : 0), layout.y + size, size, final);
   layout.text(winAnsi(value), PAGE.width - PAGE.margin - (final ? 10 : 0), layout.y + size, size, final, undefined, 'right');
@@ -530,13 +541,15 @@ export function build(input) {
   renderDetails(layout, doc);
   renderItems(layout, doc);
   renderTotals(layout, doc, totals);
+  if (doc.bank && doc.type !== 'delivery-challan') layout.section('Payment details', detailEntries(doc.bank).join('\n'));
   layout.section('Notes', doc.notes);
   layout.section('Terms & conditions', doc.terms);
   const signature = typedSignature(doc.signature);
   if (signature) layout.section('Authorized signatory', signature);
+  if (doc.embedImages && imageSource(doc.signature)) { layout.ensure(92); layout.paragraph('Authorized signature', { bold: true, gap: 2 }); layout.imageSlots.push({ kind: 'signature', page: layout.pages.length - 1, x: PAGE.margin, top: layout.y, width: 160, height: 60 }); layout.y += 68; }
   const bytes = serializePDF(layout, doc);
   const safeNumber = doc.number.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100) || 'draft';
-  return { bytes, mime: 'application/pdf', filename: `${doc.type}-${safeNumber}.pdf`, totals, warnings, pageCount: layout.pages.length };
+  return { bytes, mime: 'application/pdf', filename: `${doc.type}-${safeNumber}.pdf`, totals, warnings, pageCount: layout.pages.length, imageSlots: layout.imageSlots };
 }
 
 function requireBrowser() {
@@ -557,11 +570,11 @@ function downloadBuilt(result) {
   return result;
 }
 
-export function download(input) { return downloadBuilt(build(input)); }
+export async function download(input) { return downloadBuilt(await buildWithImages(input)); }
 
-export function preview(input) {
+export async function preview(input) {
   requireBrowser();
-  const result = build(input);
+  const result = await buildWithImages(input);
   const url = URL.createObjectURL(new Blob([result.bytes], { type: result.mime }));
   const dialog = document.createElement('dialog');
   dialog.className = 'refrens-document-preview';
@@ -610,6 +623,54 @@ export function preview(input) {
   return { ...result, dialog, close: () => dialog.close() };
 }
 
-export const RefrensDocumentExport = Object.freeze({ build, download, preview, escapeHTML, boundaries });
+export const RefrensDocumentExport = Object.freeze({ build, buildWithImages, download, preview, escapeHTML, boundaries });
 if (typeof window !== 'undefined') window.RefrensDocumentExport = RefrensDocumentExport;
 export default RefrensDocumentExport;
+
+function imageSource(value) {
+  if (!value) return null;
+  if (value instanceof Uint8Array) return value;
+  if (typeof value === 'object') return value.dataUrl || value.image || value.src || value.url || null;
+  return typeof value === 'string' && /^(data:|blob:|https?:)/i.test(value) ? value : null;
+}
+function imageBytes(value, label) {
+  if (value instanceof Uint8Array) return value;
+  if (typeof value !== 'string' || !/^data:image\/(png|jpeg);base64,[a-z0-9+/=\s]+$/i.test(value)) throw new Error(`${label}: use a PNG or JPEG image. Remote image URLs are not fetched.`);
+  if (value.length > 2800000) throw new Error(`${label}: image exceeds 2 MB. Use a smaller image.`);
+  const raw = atob(value.slice(value.indexOf(',') + 1));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
+function imageFormat(bytes, label) {
+  if (bytes.byteLength > 2097152) throw new Error(`${label}: image exceeds 2 MB.`);
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let width, height, format;
+  if (bytes.length >= 24 && v.getUint32(0) === 0x89504e47 && v.getUint32(4) === 0x0d0a1a0a) { format = 'png'; width = v.getUint32(16); height = v.getUint32(20); }
+  else if (bytes[0] === 255 && bytes[1] === 216) {
+    format = 'jpeg'; let offset = 2;
+    while (offset + 4 <= bytes.length) {
+      if (bytes[offset] !== 255) break;
+      const marker = bytes[offset + 1], length = v.getUint16(offset + 2);
+      if (length < 2 || offset + length + 2 > bytes.length) break;
+      if ([0xc0,0xc1,0xc2,0xc3,0xc5,0xc6,0xc7,0xc9,0xca,0xcb,0xcd,0xce,0xcf].includes(marker) && length >= 8) { height = v.getUint16(offset + 5); width = v.getUint16(offset + 7); break; }
+      offset += length + 2;
+    }
+  }
+  if (!width || !height || width * height > 4000000) throw new Error(`${label}: use a valid PNG/JPEG image of at most 4 million pixels.`);
+  return format;
+}
+export async function buildWithImages(input) {
+  const sources = { logo: imageSource(input.logo) || (input.logoBytes instanceof Uint8Array ? input.logoBytes : null), signature: imageSource(input.signature) };
+  const images = Object.fromEntries(Object.entries(sources).filter(([, v]) => v).map(([kind, value]) => { const bytes = imageBytes(value, kind); return [kind, { bytes, format: imageFormat(bytes, kind) }]; }));
+  const result = build({ ...input, logo: sources.logo, embedImages: true });
+  if (!Object.keys(images).length) return result;
+  const { PDFDocument } = await import('./vendor/pdf-lib.esm.min.js');
+  const pdf = await PDFDocument.load(result.bytes);
+  for (const slot of result.imageSlots) {
+    const source = images[slot.kind]; if (!source) continue;
+    const image = source.format === 'png' ? await pdf.embedPng(source.bytes) : await pdf.embedJpg(source.bytes);
+    const scale = Math.min(slot.width / image.width, slot.height / image.height);
+    const width = image.width * scale, height = image.height * scale;
+    pdf.getPages()[slot.page].drawImage(image, { x: slot.x, y: PAGE.height - slot.top - height, width, height });
+  }
+  return { ...result, bytes: await pdf.save(), warnings: [] };
+}
