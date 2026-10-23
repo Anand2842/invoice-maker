@@ -14,6 +14,6 @@ export async function identity(req:Request){const access=token(req);if(!access)r
 export function sessionResponse(req:Request,data:any){const out=json({user:{id:data.user?.id,email:data.user?.email},authenticated:true});const secure=new URL(req.url).protocol==='https:'?'; Secure':'';
  out.headers.append('Set-Cookie',`billing_access=${data.access_token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${Math.min(data.expires_in||3600,86400)}${secure}`);
  out.headers.append('Set-Cookie',`billing_refresh=${data.refresh_token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000${secure}`);return out;}
-export const uuid=(v:unknown)=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+export const uuid=(v:unknown):v is string=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
 export async function readObject(req:Request):Promise<Record<string,any>>{const value:unknown=await req.json();if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Expected a JSON object');return value as Record<string,any>;}

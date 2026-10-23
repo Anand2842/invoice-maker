@@ -1,0 +1,4 @@
+import {identity,json,uuid,readObject,originAllowed} from '../../../../lib/supabase';
+import {renderSavedDocument} from '../../../../lib/document-render';
+import {emailDraft} from '../../../../lib/email';
+export async function POST(req:Request){if(!originAllowed(req))return json({error:'Origin is not allowed'},403);const user=await identity(req);if(!user)return json({error:'Sign in first'},401);try{const body=await readObject(req);if(!uuid(body.business)||!uuid(body.id))return json({error:'Select a document'},400);const rendered=await renderSavedDocument(user.access,body.business,body.id);if(!rendered)return json({error:'Document not found'},404);return new Response(emailDraft(body,rendered.pdf),{headers:{'Content-Type':'message/rfc822','Content-Disposition':'attachment; filename="document-email.eml"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}})}catch(e){return json({error:e instanceof Error?e.message:'Unable to prepare email'},400)}}

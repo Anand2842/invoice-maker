@@ -1,6 +1,8 @@
 export const templates = Object.freeze([
   { id: 'classic', name: 'Classic', description: 'Traditional ruled invoice with a subtle brand accent.' },
   { id: 'modern', name: 'Modern', description: 'Bold brand header and shaded totals.' },
+  { id: 'elegant', name: 'Elegant', description: 'Serif headings and restrained accent rules.' },
+  { id: 'compact', name: 'Compact', description: 'Dense item rows for longer invoices.' },
   { id: 'minimal', name: 'Minimal', description: 'Clean monochrome layout with light rules.' },
 ]);
 export function templateStyle(id = 'classic', color = '#6040a0') {

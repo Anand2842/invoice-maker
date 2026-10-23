@@ -1,4 +1,4 @@
-import { templateStyle } from './pdf-templates/index.js';
+import { templateStyle, templates as pdfTemplates } from './pdf-templates/index.js';
 /**
  * Dependency-free, local PDF export. Import this module once before calling
  * window.RefrensDocumentExport.{build,download,preview}(document).
@@ -285,7 +285,7 @@ class Layout {
   command(value) { this.pages.at(-1).push(value); }
   text(encoded, x, top, size = 9, bold = false, color = '0.14 0.16 0.22', align = 'left') {
     if (align === 'right') x -= textWidth(encoded, size, bold);
-    this.command(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${color} rg 1 0 0 1 ${n(x)} ${n(PAGE.height - top)} Tm (${pdfEscape(encoded)}) Tj ET`);
+    this.command(`BT /${bold && this.style.id === 'elegant' ? 'F3' : bold ? 'F2' : 'F1'} ${size} Tf ${color} rg 1 0 0 1 ${n(x)} ${n(PAGE.height - top)} Tm (${pdfEscape(encoded)}) Tj ET`);
   }
   line(y, color = '0.85 0.87 0.9') { this.command(`${color} RG 0.6 w ${PAGE.margin} ${n(PAGE.height - y)} m ${n(PAGE.width - PAGE.margin)} ${n(PAGE.height - y)} l S`); }
   rect(x, top, width, height, color) { this.command(`${color} rg ${n(x)} ${n(PAGE.height - top - height)} ${n(width)} ${n(height)} re f`); }
@@ -302,7 +302,7 @@ class Layout {
     if (modern) this.rect(PAGE.margin, this.y - 26, CONTENT_WIDTH, (continued ? 48 : 53) + numberLines.length * 13, this.style.accent);
     const x = PAGE.margin + (modern ? 12 : 0);
     const color = modern ? this.style.foreground : this.style.accent;
-    this.text(winAnsi(`${this.doc.title}${continued ? ' - continued' : ''}`), x, this.y, continued ? 15 : this.style.id === 'minimal' ? 22 : 25, true, color);
+    this.text(winAnsi(`${this.doc.title}${continued ? ' - continued' : ''}`), x, this.y, continued ? 15 : this.style.id === 'compact' ? 20 : this.style.id === 'minimal' ? 22 : 25, true, color);
     this.y += continued ? 21 : 26;
     for (const line of numberLines) { this.text(line, x, this.y, 10, true, color); this.y += 13; }
     if (!modern) this.line(this.y + 2, this.style.accent);
@@ -313,9 +313,9 @@ class Layout {
     for (const line of wrap(value, width, size, bold)) {
       this.ensure(size + 6);
       this.text(line, PAGE.margin, this.y + size, size, bold, color);
-      this.y += size + 5;
+      this.y += size + (this.style.id === 'compact' ? 3 : 5);
     }
-    this.y += gap;
+    this.y += this.style.id === 'compact' ? Math.max(0, gap - 4) : gap;
   }
   section(title, value) {
     if (!value) return;
@@ -398,6 +398,7 @@ function tableHeader(layout, delivery) {
 }
 
 function renderItems(layout, doc) {
+  const lineHeight = layout.style.id === 'compact' ? 11 : 13, rowPadding = layout.style.id === 'compact' ? 7 : 14;
   const delivery = doc.type === 'delivery-challan';
   tableHeader(layout, delivery);
   doc.items.forEach((item, index) => {
@@ -416,15 +417,15 @@ function renderItems(layout, doc) {
     // Amount is before tax; the tax summary below reconciles to the grand total.
     const amount = delivery ? [] : wrap(money(item.minor.taxable, doc.currency), 117, 9, true);
     const lineCount = Math.max(description.length, quantity.length, rate.length, amount.length);
-    if (lineCount * 13 + 18 < 570 && layout.y + lineCount * 13 + 18 > PAGE.bottom) { layout.newPage(); tableHeader(layout, delivery); }
+    if (lineCount * lineHeight + 18 < 570 && layout.y + lineCount * lineHeight + 18 > PAGE.bottom) { layout.newPage(); tableHeader(layout, delivery); }
     let offset = 0;
     while (offset < lineCount) {
-      let capacity = Math.floor((PAGE.bottom - layout.y - 18) / 13);
-      if (capacity < 1) { layout.newPage(); tableHeader(layout, delivery); capacity = Math.floor((PAGE.bottom - layout.y - 18) / 13); }
+      let capacity = Math.floor((PAGE.bottom - layout.y - 18) / lineHeight);
+      if (capacity < 1) { layout.newPage(); tableHeader(layout, delivery); capacity = Math.floor((PAGE.bottom - layout.y - 18) / lineHeight); }
       const count = Math.min(capacity, lineCount - offset);
       for (let row = 0; row < count; row++) {
         const position = offset + row;
-        const baseline = layout.y + 13 + row * 13;
+        const baseline = layout.y + lineHeight + row * lineHeight;
         const desc = description[position];
         if (position === 0) layout.text(String(index + 1), PAGE.margin + 5, baseline, 8);
         if (desc) layout.text(desc.line, PAGE.margin + 26, baseline, desc.size || 9, desc.bold || false, desc.color);
@@ -432,7 +433,7 @@ function renderItems(layout, doc) {
         if (rate[position]) layout.text(rate[position], 418, baseline, 9, false, undefined, 'right');
         if (amount[position]) layout.text(amount[position], PAGE.width - PAGE.margin - 8, baseline, 9, true, undefined, 'right');
       }
-      layout.y += count * 13 + 14;
+      layout.y += count * lineHeight + rowPadding;
       layout.line(layout.y);
       layout.y += 4;
       offset += count;
@@ -518,9 +519,10 @@ function serializePDF(layout, doc) {
   layout.pages.forEach((commands, index) => {
     const pageId = 5 + index * 2;
     const content = `${commands.join('\n')}\n`;
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE.width} ${PAGE.height}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${pageId + 1} 0 R >>`);
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE.width} ${PAGE.height}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 ${5 + count * 2} 0 R >> >> /Contents ${pageId + 1} 0 R >>`);
     objects.push(`<< /Length ${content.length} >>\nstream\n${content}endstream`);
   });
+  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>');
   const infoId = objects.length + 1;
   objects.push(`<< /Title (${pdfEscape(winAnsi(`${doc.title} ${doc.number}`))}) /Author (${pdfEscape(winAnsi(doc.seller.name))}) /Creator (Refrens local document export) /Producer (Browser-local PDF writer) >>`);
   let output = '%PDF-1.4\n%Refrens local document export\n';
@@ -572,10 +574,10 @@ function downloadBuilt(result) {
 
 export async function download(input) { return downloadBuilt(await buildWithImages(input)); }
 
-export async function preview(input) {
+export async function preview(input, onTemplateChange) {
   requireBrowser();
-  const result = await buildWithImages(input);
-  const url = URL.createObjectURL(new Blob([result.bytes], { type: result.mime }));
+  let result = await buildWithImages(input);
+  let url = URL.createObjectURL(new Blob([result.bytes], { type: result.mime }));
   const dialog = document.createElement('dialog');
   dialog.className = 'refrens-document-preview';
   dialog.setAttribute('aria-label', 'PDF document preview');
@@ -596,7 +598,10 @@ export async function preview(input) {
   close.setAttribute('aria-label', 'Close PDF preview');
   close.style.cssText = 'font:500 14px system-ui;padding:10px 16px;border:1px solid #d8d4e2;border-radius:6px;background:white;color:#242033;cursor:pointer;';
   close.addEventListener('click', () => dialog.close());
-  toolbar.append(heading, save, close);
+  const design = document.createElement('select');design.setAttribute('aria-label','Preview PDF design');
+  for(const template of pdfTemplates){const option=document.createElement('option');option.value=template.id;option.textContent=template.name;design.append(option)}design.value=input.template||'classic';
+  const previewStatus=document.createElement('p');previewStatus.setAttribute('role','status');
+  toolbar.append(heading, design, save, close);
   dialog.append(toolbar);
   if (result.warnings.length) {
     const notice = document.createElement('p');
@@ -615,7 +620,8 @@ export async function preview(input) {
   fallback.rel = 'noopener';
   fallback.textContent = 'Open PDF in a new tab';
   fallback.style.cssText = 'display:inline-block;margin-top:10px;font:13px system-ui;color:#6033ac;';
-  dialog.append(frame, fallback);
+  dialog.append(previewStatus, frame, fallback);
+  let revision=0;design.addEventListener('change',async()=>{const own=++revision;save.disabled=true;previewStatus.textContent='Rendering design…';try{const next=await buildWithImages({...input,template:design.value});if(own!==revision||!dialog.open)return;URL.revokeObjectURL(url);result=next;url=URL.createObjectURL(new Blob([result.bytes],{type:result.mime}));frame.src=url;fallback.href=url;previewStatus.textContent='Design updated';onTemplateChange?.(design.value);}catch(error){previewStatus.textContent=error.message;previewStatus.setAttribute('role','alert')}finally{if(own===revision)save.disabled=false}});
   dialog.addEventListener('close', () => { URL.revokeObjectURL(url); dialog.remove(); }, { once: true });
   document.body.append(dialog);
   try { dialog.showModal(); } catch (error) { URL.revokeObjectURL(url); dialog.remove(); throw error; }

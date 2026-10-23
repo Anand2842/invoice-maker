@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import{whatsappDraft}from'../public/whatsapp-draft.js';
+test('WhatsApp draft encodes only the chosen recipient and message',()=>{const link=new URL(whatsappDraft('+91 90000 00000','Invoice & quotation','https://billing.example/share/demo'));assert.equal(link.pathname,'/919000000000');assert.equal(link.searchParams.get('text'),'Invoice & quotation\nhttps://billing.example/share/demo')});
+test('WhatsApp draft rejects unsafe links and invalid recipients',()=>{assert.throws(()=>whatsappDraft('123','Hello','https://billing.example'),/country code/);assert.throws(()=>whatsappDraft('919000000000','Hello','javascript:alert(1)'),/HTTPS/)});
