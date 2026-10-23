@@ -1,0 +1,33 @@
+import {writeFile} from 'node:fs/promises';
+process.stdout.write('Ready for hidden test configuration\n');if(process.stdin.isTTY)process.stdin.setRawMode(true);let raw='';for await(const chunk of process.stdin){raw+=chunk;if(raw.includes('\n'))break}if(process.stdin.isTTY)process.stdin.setRawMode(false);process.stdin.pause();const c=JSON.parse(raw.trim());const results=[];let cookie='';const base='http://127.0.0.1:4173';
+const check=(name,pass,details='')=>{results.push({name,status:pass?'PASS':'FAIL',details});if(!pass)throw Error(name+': '+details)};
+async function req(path,body,method='GET',auth=true){const response=await fetch(base+path,{method,signal:AbortSignal.timeout(30000),headers:{Origin:base,'Content-Type':'application/json',...(auth?{Cookie:cookie}:{})},...(body?{body:JSON.stringify(body)}:{})});const bytes=new Uint8Array(await response.arrayBuffer());let data;try{data=JSON.parse(new TextDecoder().decode(bytes))}catch{}return{status:response.status,response,bytes,data}}
+async function login(email){const r=await req('/api/auth',{action:'login',email,password:c.password},'POST');check('Login '+(email===c.email?'owner':'isolated account'),r.status===200);cookie=r.response.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')}
+const save=(r,data,extra={})=>req('/api/records',{business:c.business,collection:'documents',id:r.id,version:r.version,data,...extra},'PATCH');
+const read=async id=>(await req('/api/records?'+new URLSearchParams({business:c.business,collection:'documents',id,demo:'true'}))).data.records[0];
+let parent,credit,debit;
+try{
+ await login(c.email);
+ const d={type:'gst-invoice',number:'P3-'+Date.now(),date:'2026-10-24',currency:'INR',status:'draft',seller:{name:'Phase 3 Demo Studio',address:'12 Demo Road'},buyer:{name:'Phase 3 Demo Buyer',address:'45 Sample Avenue'},taxType:'GST',gstMode:'split',roundOff:true,template:'compact',items:[{name:'Demo service',hsn:'998314',quantity:1,rate:100.25,taxRate:18,cessRate:2}]};
+ let r=await req('/api/records',{business:c.business,collection:'documents',demo:true,data:d},'POST');check('Save cess and rounded invoice',r.status===201,r.data?.error);parent=r.data.record;check('Server recomputes tax and rounded totals',parent.data.totals.total===120&&parent.data.totals.cess===2.01&&parent.data.totals.roundOff===-.31);
+ r=await req('/api/workflows',{business:c.business,id:parent.id,version:parent.version,action:'invoice-credit-note'},'POST');check('Draft invoice cannot produce adjustment',r.status===400);
+ r=await save(parent,{...parent.data,status:'sent'});check('Issue synthetic invoice without sending a message',r.status===200);parent=r.data.record;
+ r=await req('/api/workflows',{business:c.business,id:parent.id,version:parent.version,action:'invoice-credit-note'},'POST');check('Create linked credit draft',r.status===201,r.data?.error);credit=r.data.record;check('Credit has unique CN number and original reference',credit.data.number.startsWith('CN-')&&credit.data.originalDocumentId===parent.id&&credit.data.originalDocumentNumber===parent.data.number);
+ r=await req('/api/workflows',{business:c.business,id:parent.id,version:parent.version,action:'invoice-credit-note'},'POST');check('Stale source version prevents repeat click',r.status===409);parent=await read(parent.id);
+ r=await req('/api/workflows',{business:c.business,id:parent.id,version:parent.version,action:'invoice-debit-note'},'POST');check('Create linked debit draft',r.status===201,r.data?.error);debit=r.data.record;check('Debit number differs from credit',debit.data.number.startsWith('DN-')&&debit.data.number!==credit.data.number);parent=await read(parent.id);
+ r=await save(credit,{...credit.data,currency:'USD',roundOff:false});check('Database rejects currency mismatch',r.status===400);
+ r=await save(credit,{...credit.data,buyer:{name:'Different buyer'}});check('Database rejects different buyer',r.status===400);
+ r=await save(credit,{...credit.data,originalDocumentId:'aaaaaaaa-0000-4000-8000-000000000001'});check('Cannot retarget an existing adjustment',r.status===400);
+ r=await save(credit,{...credit.data,adjustmentReason:''});check('Empty adjustment reason denied',r.status===400);
+ r=await save(credit,{...credit.data,date:'2026-10-23'});check('Adjustment cannot precede invoice',r.status===400);
+ r=await save(credit,{...credit.data,status:'sent',adjustmentReason:'Partial return — synthetic test',items:[{...credit.data.items[0],rate:20}]});check('Issue partial credit note',r.status===200,r.data?.error);credit=r.data.record;
+ r=await save(debit,{...debit.data,status:'sent',adjustmentReason:'Additional service — synthetic test',items:[{...debit.data.items[0],rate:5}]});check('Issue partial debit note',r.status===200,r.data?.error);debit=r.data.record;
+ r=await save(parent,{...parent.data,currency:'USD',roundOff:false});check('Parent currency locked while adjustments exist',r.status===400);
+ r=await save(parent,undefined,{archived:true});check('Parent cannot be archived with active adjustments',r.status===400);
+ for(const [label,record] of [['invoice',parent],['credit-note',credit],['debit-note',debit]]){r=await req('/api/documents/preview?'+new URLSearchParams({business:c.business,id:record.id}));check(label+' saved PDF renders',r.status===200&&new TextDecoder().decode(r.bytes.slice(0,5))==='%PDF-');await writeFile(c.directory+'/'+label+'.pdf',r.bytes)}
+ r=await req('/api/documents/preview?'+new URLSearchParams({business:c.business,id:credit.id}),null,'GET',false);check('Anonymous credit PDF access denied',r.status===401);
+ await login(c.otherEmail);r=await req('/api/workflows',{business:c.business,id:parent.id,version:parent.version,action:'invoice-credit-note'},'POST');check('Cross-business adjustment creation denied',r.status===404);
+ r=await req('/api/documents/preview?'+new URLSearchParams({business:c.business,id:debit.id}));check('Cross-business debit PDF access denied',r.status===404);
+ await login(c.email);const reopened=await read(credit.id);check('Saved note retains reason, cess, rounding and original invoice',reopened.data.adjustmentReason===credit.data.adjustmentReason&&reopened.data.items[0].cessRate===2&&reopened.data.roundOff&&reopened.data.originalDocumentId===parent.id);
+ const browser={invoice:parent.id,credit:credit.id,debit:debit.id,business:c.business};await writeFile(c.directory+'/backend-tests.json',JSON.stringify({date:new Date().toISOString(),results,browser},null,2));console.log(JSON.stringify({pass:results.length,fail:0,browser}));
+}catch(e){await writeFile(c.directory+'/backend-tests.json',JSON.stringify({results,error:e.message},null,2));console.log(JSON.stringify({error:e.message,results}));process.exitCode=1}finally{process.exit(process.exitCode||0)}

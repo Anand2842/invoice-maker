@@ -22,6 +22,7 @@ const TITLES = {
   invoice: 'Invoice', 'gst-invoice': 'Tax Invoice', quotation: 'Quotation',
   proforma: 'Proforma Invoice', 'purchase-order': 'Purchase Order',
   'delivery-challan': 'Delivery Challan', 'commercial-invoice': 'Commercial Invoice',
+  'credit-note': 'Credit Note', 'debit-note': 'Debit Note',
 };
 const CP1252 = new Map([
   [0x20ac, 128], [0x201a, 130], [0x0192, 131], [0x201e, 132], [0x2026, 133],
@@ -136,7 +137,7 @@ function normalize(input) {
   if (!['split', 'igst'].includes(gstMode)) throw new RangeError('GST mode must be split or igst.');
   if (!Array.isArray(input.items) || !input.items.length || input.items.length > 1000) throw new RangeError('Add between 1 and 1,000 document items.');
   const groups = new Map();
-  const minor = { subtotal: 0, discount: 0, taxable: 0, cgst: 0, sgst: 0, igst: 0, vat: 0, tax: 0, shipping: 0, total: 0 };
+  const minor = { subtotal: 0, discount: 0, taxable: 0, cgst: 0, sgst: 0, igst: 0, vat: 0, cess: 0, tax: 0, shipping: 0, roundOff: 0, preRoundTotal: 0, total: 0 };
   let quantityTotal = 0;
   const items = input.items.map((item, index) => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) throw new TypeError(`Item ${index + 1} must be an object.`);
@@ -162,8 +163,11 @@ function normalize(input) {
     const sgst = taxType === 'GST' && gstMode === 'split' ? tax - cgst : 0;
     const igst = taxType === 'GST' && gstMode === 'igst' ? tax : 0;
     const vat = taxType === 'VAT' ? tax : 0;
-    const total = safeMinor(BigInt(taxable) + BigInt(tax), `${label} total`);
-    for (const [key, amount] of Object.entries({ subtotal, discount, taxable, tax, cgst, sgst, igst, vat })) minor[key] = safeMinor(BigInt(minor[key]) + BigInt(amount));
+    const cessRate = decimal(item.cessRate, `${label} cess rate`, 0, 1000);
+    if (cessRate.numeric && (taxType !== 'GST' || type === 'delivery-challan')) throw new RangeError('Percentage cess requires a GST document.');
+    const cess = safeMinor(rounded(BigInt(taxable) * cessRate.numerator, cessRate.denominator * 100n));
+    const total = safeMinor(BigInt(taxable) + BigInt(tax) + BigInt(cess), `${label} total`);
+    for (const [key, amount] of Object.entries({ subtotal, discount, taxable, tax, cgst, sgst, igst, vat, cess })) minor[key] = safeMinor(BigInt(minor[key]) + BigInt(amount));
     quantityTotal += quantity.numeric;
     if (taxApplies) {
       const key = String(ratePercent.numeric);
@@ -178,8 +182,8 @@ function normalize(input) {
       hsn: textValue(item.hsn, `${label} HSN`), quantity: quantity.raw,
       rateMinor: safeMinor(rounded(rate.numerator * 100n, rate.denominator)),
       discountLabel: isPercent ? `${rawDiscount.numeric}%` : null,
-      taxRate: taxApplies ? ratePercent.numeric : 0,
-      minor: { subtotal, discount, taxable, tax, cgst, sgst, igst, vat, total },
+      taxRate: taxApplies ? ratePercent.numeric : 0, cessRate: cessRate.numeric,
+      minor: { subtotal, discount, taxable, tax, cgst, sgst, igst, vat, cess, total },
     };
   });
   let shippingAmount = input.shipping;
@@ -187,13 +191,25 @@ function normalize(input) {
   // A free-form shipping address is a detail, never an implicit charge.
   if (typeof shippingAmount === 'string' && Number.isNaN(Number(shippingAmount))) shippingAmount = 0;
   minor.shipping = toMinor(shippingAmount || 0, 'Shipping charge');
-  minor.total = safeMinor(BigInt(minor.taxable) + BigInt(minor.tax) + BigInt(minor.shipping), 'Document total');
+  if (input.roundOff !== undefined && typeof input.roundOff !== 'boolean') throw new TypeError('Round-off must be enabled or disabled.');
+  if (input.roundOff && (currency !== 'INR' || type === 'delivery-challan')) throw new RangeError('Rupee round-off is only available for INR amount documents.');
+  minor.preRoundTotal = safeMinor(BigInt(minor.taxable) + BigInt(minor.tax) + BigInt(minor.cess) + BigInt(minor.shipping), 'Document total');
+  minor.total = input.roundOff ? safeMinor(rounded(BigInt(minor.preRoundTotal), 100n) * 100n) : minor.preRoundTotal;
+  minor.roundOff = minor.total - minor.preRoundTotal;
   const date = realDate(input.date, 'Document date', localDate());
   const dueDate = realDate(input.dueDate, 'Due date');
   if (dueDate && dueDate < date) throw new RangeError('Due date cannot be before the document date.');
+  if (['credit-note', 'debit-note'].includes(type)) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.originalDocumentId || '')) throw new RangeError('Create adjustment notes from a saved invoice.');
+    if (!textValue(input.originalDocumentNumber) || !realDate(input.originalDocumentDate, 'Original invoice date')) throw new RangeError('Original invoice number and date are required.');
+    if (date < input.originalDocumentDate) throw new RangeError('Adjustment date cannot precede its invoice.');
+    if (!textValue(input.adjustmentReason).trim()) throw new RangeError('An adjustment reason is required.');
+    if (!minor.total) throw new RangeError('An adjustment must have a positive total.');
+  }
   const document = {
     type, title: TITLES[type], number: textValue(input.number, 'Document number') || 'DRAFT',
-    date, dueDate, currency, taxType, gstMode, items,
+    date, dueDate, currency, taxType, gstMode, items, status: input.status || 'draft', roundOff: input.roundOff === true,
+    originalDocumentId: input.originalDocumentId, originalDocumentNumber: textValue(input.originalDocumentNumber, 'Original invoice number'), originalDocumentDate: realDate(input.originalDocumentDate, 'Original invoice date'), adjustmentReason: textValue(input.adjustmentReason, 'Adjustment reason'),
     seller: party(input.seller, 'Seller'), buyer: party(input.buyer, 'Buyer'),
     notes: textValue(input.notes, 'Notes'), terms: textValue(input.terms, 'Terms'),
     shipping: input.shipping, transport: input.transport, customFields: input.customFields, taxDetails: input.taxDetails,
@@ -206,6 +222,9 @@ function normalize(input) {
     displayAmounts: type !== 'delivery-challan' };
   return { document, totals };
 }
+
+// Shared by the editor and saved-record validation; does not generate PDF bytes.
+export function calculate(input) { return normalize(input); }
 
 function money(minor, currency) {
   return `${currency} ${new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(minor / 100)}`;
@@ -411,6 +430,7 @@ function renderItems(layout, doc) {
     const meta = [item.hsn ? `HSN/SAC: ${item.hsn}` : ''];
     if (!delivery && item.minor.discount) meta.push(`Discount: ${item.discountLabel || money(item.minor.discount, doc.currency)}`);
     if (!delivery && doc.taxType !== 'NONE') meta.push(`${doc.taxType}: ${item.taxRate}%`);
+    if (!delivery && item.cessRate) meta.push(`Cess: ${item.cessRate}%`);
     if (meta.filter(Boolean).length) description.push(...wrap(meta.filter(Boolean).join(' | '), descriptionWidth, 8).map(line => ({ line, size: 8, color: '0.43 0.45 0.51' })));
     const quantity = wrap(item.quantity, delivery ? 105 : 40, 9);
     const rate = delivery ? [] : wrap(money(item.rateMinor, doc.currency), 92, 9);
@@ -472,6 +492,8 @@ function renderTotals(layout, doc, totals) {
   } else if (doc.taxType === 'GST') totalLine(layout, 'IGST', minor.igst, doc.currency);
   else if (doc.taxType === 'VAT') totalLine(layout, 'VAT', minor.vat, doc.currency);
   if (minor.shipping) totalLine(layout, 'Shipping (untaxed)', minor.shipping, doc.currency);
+  if (minor.cess) totalLine(layout, 'Cess', minor.cess, doc.currency);
+  if (doc.roundOff) totalLine(layout, 'Round-off', minor.roundOff, doc.currency);
   totalLine(layout, doc.type === 'quotation' ? 'Quotation total' : doc.type === 'purchase-order' ? 'Order total' : 'Total', minor.total, doc.currency, true);
   if (totals.taxGroups.length) {
     const groups = totals.taxGroups.map(group => {
@@ -481,6 +503,16 @@ function renderTotals(layout, doc, totals) {
       return `${doc.taxType} ${group.rate}% | Taxable ${money(group.taxable, doc.currency)} | ${components}`;
     });
     layout.section('Tax breakdown', groups.join('\n'));
+  }
+  if (doc.taxType === 'GST' && doc.items.some(item => item.hsn)) {
+    const groups = new Map();
+    for (const item of doc.items) {
+      const key = JSON.stringify([item.hsn, item.taxRate, item.cessRate]);
+      const group = groups.get(key) || { hsn: item.hsn || 'Unspecified', rate: item.taxRate, cessRate: item.cessRate, taxable: 0, tax: 0, cess: 0 };
+      for (const k of ['taxable', 'tax', 'cess']) group[k] += item.minor[k];
+      groups.set(key, group);
+    }
+    layout.section('HSN/SAC summary', [...groups.values()].map(g => `${g.hsn} | GST ${g.rate}% | Taxable ${money(g.taxable, doc.currency)} | Tax ${money(g.tax, doc.currency)}${g.cess ? ` | Cess ${g.cessRate}%: ${money(g.cess, doc.currency)}` : ''}`).join('\n'));
   }
 }
 
@@ -541,6 +573,7 @@ export function build(input) {
   const layout = new Layout(doc);
   renderParties(layout, doc);
   renderDetails(layout, doc);
+  if (['credit-note', 'debit-note'].includes(doc.type)) layout.section('Invoice adjustment', `${doc.status === 'draft' ? 'DRAFT - Not issued\n' : doc.status === 'cancelled' ? 'CANCELLED - No active adjustment\n' : 'ISSUED\n'}Original invoice: ${doc.originalDocumentNumber} (${dateLabel(doc.originalDocumentDate)})\nReason: ${doc.adjustmentReason}\n${doc.type === 'credit-note' ? 'Reduces' : 'Increases'} the amount owed. This document is not a payment receipt.`);
   renderItems(layout, doc);
   renderTotals(layout, doc, totals);
   if (doc.bank && doc.type !== 'delivery-challan') layout.section('Payment details', detailEntries(doc.bank).join('\n'));
