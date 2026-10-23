@@ -4,7 +4,7 @@ A Refrens-inspired application backed by the owner's Supabase project. The captu
 
 ## Run
 
-Node 22.13 or later, `npm ci`, then `npm run dev -- --port 4173`. Open `/dashboard/` for the signed-in workspace, `/settings/` for the business profile, `/services/` for all services and `/free-online-invoice-generator/?document=invoice` for guest PDF creation.
+Node 22.13 or later, `npm ci`, then `npm run dev -- --port 4173`. Open `/dashboard/` for the signed-in workspace, `/settings/` for the business profile, `/services/` for all services, `/invoice-editor?document=invoice` for authenticated creation and `/free-online-invoice-generator/?document=invoice` for guest PDF creation.
 
 `npm test` checks document arithmetic, PDF structure, validation, dashboard aggregation and workflow behavior. `npm run check` checks application JavaScript syntax. The Sites build helper produces the deployable Worker bundle.
 
@@ -12,7 +12,13 @@ Node 22.13 or later, `npm ci`, then `npm run dev -- --port 4173`. Open `/dashboa
 
 Migrations are in `supabase/migrations/`. The project-specific URL and publishable key are in `lib/supabase.ts`; no service-role or database password is part of the runtime. User sessions are in HttpOnly cookies. Access rules live in Supabase RLS and private Storage policies. Migration and smoke scripts accept privileged test configuration via hidden stdin, never command-line flags or tracked environment files.
 
-`202610200001` creates the billing foundation; `002` fixes INSERT-returning visibility; `003` implements transactional conversions; `202610210001` adds profiles and atomic numbering/duplication; `202610210002` hardens workflow checks and immutable IDs. Apply migrations in order to a fresh project. Do not reapply migrations that already ran.
+`202610200001` creates the billing foundation; `002` fixes INSERT-returning visibility; `003` implements transactional conversions; `202610210001` adds profiles and atomic numbering/duplication; `202610210002` hardens workflow checks and immutable IDs; `202610230001` adds frozen PDF shares with hashed tokens/passwords, expiration and revocation. Apply migrations in order to a fresh project. Do not reapply migrations that already ran.
+
+## Documents and delivery
+
+Five PDF templates support PNG/JPEG logos and signatures. PDF fonts currently support Latin/WinAnsi; unsupported characters produce an explicit validation error. Shares are frozen snapshots. Their tokens are only returned at creation and their access is separate from business membership. The deployed Site remains owner-private, so outside-recipient use is blocked by hosting even with a valid document token.
+
+Email drafts download without sending. Live delivery requires runtime `RESEND_API_KEY` and `BILLING_EMAIL_FROM` for a verified sender. No credentials belong in source or public assets. The send action is disabled while the provider is absent. WhatsApp delivery and provider delivery confirmation are not verified.
 
 ## Publication
 
