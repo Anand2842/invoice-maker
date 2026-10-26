@@ -25,8 +25,8 @@ These are functional foundations, not complete products. Service navigation pass
 ## Remaining roadmap
 
 - Phase 2: core implementation and local verification completed; live email and outside-recipient sharing remain blocked as described below.
-- Phase 3: percentage cess, optional INR round-off, PDF HSN summaries and linked credit/debit notes are committed locally. Both note migrations are applied. Twelve strict database assertions, including competing credits, pass. A 1,796-code searchable reference and GSTR-1/GSTR-3B review workpapers are implemented and tested locally. Only five conditional service rates are populated; complete Indian tariff/rate validation and portal-schema exports remain unfinished. IRN/eWay Bill adapters remain unbuilt.
-- Phase 4: payment gateway/webhooks, client/vendor statements and financial reports. Recording a payment is not payment collection.
+- Phase 3: percentage cess, optional INR round-off, PDF HSN summaries and linked credit/debit notes are published in version 5. Both note migrations are applied. Twelve strict database assertions, including competing credits, pass. A 1,796-code searchable reference and GSTR-1/GSTR-3B review workpapers are implemented and tested locally. Only five conditional service rates are populated; complete Indian tariff/rate validation and portal-schema exports remain unfinished. IRN/eWay Bill adapters remain unbuilt.
+- Phase 4: client statements and receivables aging now implemented with JSON/CSV/PDF exports. Payment entry/receipts, vendor bills/payments/statements, P&L, balance sheet, further sales reports and gateway/webhooks remain unfinished. Recording a payment is not payment collection.
 - Phase 5: team invitation UI/API, audit history UI. Membership RLS and audit storage exist.
 - Phase 6: API keys/versioned API, AI integration, IndiaMART sync, MCP, unattended recurring execution and native mobile apps.
 
@@ -38,13 +38,13 @@ PDF export uses Latin/WinAnsi fonts and explicitly rejects unsupported Unicode. 
 
 ## Release state
 
-At release-candidate preparation, the live Site was version 4 (Phase 2). Initial Sites authentication failed but then recovered; repository access and owner-private audience were verified. The exact Phase 3 publication result is recorded in the external release-verification.json after deployment. Final local regression: 122 unit tests, 12 strict database assertions, 26 GST API assertions and nine follow-up checks passed; syntax, TypeScript and the production build passed. Browser invoice/credit/debit PDFs and GST JSON/CSV downloads passed. These results do not establish full parity or statutory filing readiness. See PHASE3-TEST-REPORT.md for exact scope and remaining gaps.
+Version 5 (Phase 3) was successfully published. This Phase 4 release candidate adds database monetary hardening and client statements/receivables aging. Its production deployment result is recorded after publication in `../reports/phase4-2026-10-26/release-verification.json` outside the checkout. Local checks: 157 unit tests, 139 database money assertions, 12 adjustment/concurrency assertions, 16 statement API assertions, syntax, TypeScript and production build. Browser statement PDF and CSV download checks pass; API/browser CSVs match. Mobile verification is inconclusive: the browser viewport override returned a 1280px viewport despite a 390px request. See PHASE4-TEST-REPORT.md.
 
 ## Phase 3 local delivery and limits
 
 The invoice editor now has searchable HSN/SAC, explicit GST reporting classification/place-of-supply fields and unit codes. Expense entry supports reviewed tax amounts, ITC eligibility, a manual GSTR-2B reconciliation flag and reversals. Authenticated GST reports isolate businesses and demo records, disclose unsupported data and export JSON/CSV review workpapers with `portalReady: false`.
 
-Fixed saved-editor interaction locks, unchanged-party normalization, empty-description prefill and negative-number CSV handling. Database negative tests now require exact rejection reasons; the earlier permissive test result was superseded by the corrected 12-assertion run. SQL caps use stored totals; arbitrary direct-write monetary recomputation remains additional hardening work.
+Fixed saved-editor interaction locks, unchanged-party normalization, empty-description prefill and negative-number CSV handling. Database negative tests now require exact rejection reasons; the earlier permissive test result was superseded by the corrected 12-assertion run. SQL caps now receive database-recalculated totals before validation. The Phase 4 money migration enforces this for direct authenticated writes as well as app writes; no existing documents were rewritten.
 
 ## Phase 2 delivered
 
@@ -68,3 +68,12 @@ The application share endpoint works without a business login, but the private h
 - ../reports/phase3-2026-10-25 (verification completed 26 October): detailed report, 122 unit results, 12 database assertions, 35 API/follow-up assertions, browser JSON/CSV/PDF downloads and screenshots. Publication evidence is recorded separately after deployment.
 
 Credentials are excluded from reports and application source. Runtime requests use the publishable key plus each user's JWT so RLS stays active. Privileged credentials supplied in chat should be rotated by the project owner.
+
+## Phase 4 delivery and limits
+
+- Monetary inputs are recalculated in PostgreSQL before adjustment checks. 126 SQL/editor calculation cases agree, nine invalid inputs are rejected, existing active totals were audited, and three direct-write tampering cases pass. All 43 documents present at audit matched; no backfill or user-record changes occurred.
+- Client statements isolate business/demo/currency and selected client ID, calculate opening/movement/closing balances, incorporate issued notes and recorded incoming payments, and export JSON/CSV/PDF. Receivables aging has current, 1–30, 31–60, 61–90, over 90 days, undated and separate credit balances.
+- Paid status alone never synthesizes a payment. Incomplete settlements, unlinked clients, missing due dates, malformed payments and inherited payment currencies are review issues. These reports use current active records, not immutable historical snapshots.
+- No vendor liabilities are inferred from purchase orders or expenses. Vendor statements require the vendor-bill/payment model. Payment entry UI, numbered receipts and refunds remain next.
+- Statements cap source records at 10,000 and PDF movements at 2,000. Unsupported scripts require CSV because the PDF font is Latin/WinAnsi. The dashboard still has its earlier pending-balance definition and must be reconciled with the new settlement model in the next payment batch.
+- Evidence: `../reports/phase4-2026-10-26` outside checkout, including PDF/CSV downloads, screenshot, API/DB results and detailed HTML report.

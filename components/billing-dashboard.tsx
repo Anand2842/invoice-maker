@@ -1,7 +1,7 @@
 'use client';
 import{useEffect,useState}from'react';
 import{ResponsiveContainer,BarChart,Bar,XAxis,YAxis,CartesianGrid,Tooltip,Legend}from'recharts';
-const links=[['Dashboard','/dashboard/'],['Documents','/services/?service=invoicing'],['Clients','/services/?service=clients'],['Inventory','/services/?service=inventory'],['Expenses','/services/?service=expenses'],['CRM','/services/?service=sales-crm'],['Accounting','/services/?service=accounting'],['Settings','/settings/']];
+const links=[['Dashboard','/dashboard/'],['Documents','/services/?service=invoicing'],['Clients','/services/?service=clients'],['Inventory','/services/?service=inventory'],['Expenses','/services/?service=expenses'],['CRM','/services/?service=sales-crm'],['Accounting','/services/?service=accounting'],['Statements','/reports/statements/'],['Settings','/settings/']];
 async function api(path:string){const r=await fetch(path);const d:any=await r.json();if(!r.ok)throw Error(d.error||'Unable to load data');return d}
 export default function BillingDashboard(){
  const[user,setUser]=useState<any>(undefined),[businesses,setBusinesses]=useState<any[]>([]),[business,setBusiness]=useState(''),[demo,setDemo]=useState(false),[data,setData]=useState<any>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[reload,setReload]=useState(0);
