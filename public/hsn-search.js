@@ -1,0 +1,2 @@
+export const validHsnFormat=value=>/^\d{4}(?:\d{2})?(?:\d{2})?$/.test(String(value||''));
+export function searchHsn(entries,query,limit=20){const terms=String(query||'').trim().toLowerCase().slice(0,120).split(/\s+/).filter(Boolean);if(!terms.length)return[];return entries.filter(r=>terms.every(t=>(r.code+' '+r.description).toLowerCase().includes(t))).sort((a,b)=>Number(b.code===query)-Number(a.code===query)||Number(b.code.startsWith(query))-Number(a.code.startsWith(query))||a.code.localeCompare(b.code)).slice(0,Math.max(1,Math.min(50,limit)))}
