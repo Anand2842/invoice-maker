@@ -4,105 +4,143 @@
     "name": "Accounting Software",
     "source": "https://www.refrens.com/free-accounting-software",
     "group": "Products",
-    "module": "journals"
+    "module": "journals",
+    "launchStatus": "Basic",
+    "launchName": "Manual accounting journals",
+    "launchDescription": "Add balanced journal entries and export CSV. Trial balance, P&L and balance sheet are coming soon."
   },
   {
     "id": "ai-assistant",
     "name": "AI Accounting Agent",
     "source": "https://www.refrens.com/freya-ai-accounting-assistant",
     "group": "Products",
-    "module": "assistant"
+    "module": "assistant",
+    "launchStatus": "Coming soon",
+    "launchDescription": "AI accounting is not connected. Manual journals are available separately."
   },
   {
     "id": "gst-billing",
     "name": "GST Billing Software",
     "source": "https://www.refrens.com/gst-billing-software",
     "group": "Products",
-    "module": "documents"
+    "module": "documents",
+    "launchStatus": "Basic",
+    "launchName": "GST invoicing",
+    "launchDescription": "Create GST invoices and review workpapers. Government filing, IRN and eWay Bill submission are coming soon."
   },
   {
     "id": "invoicing",
     "name": "Invoicing Software",
     "source": "https://www.refrens.com/free-online-invoicing-software",
     "group": "Products",
-    "module": "documents"
+    "module": "documents",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "quotation-software",
     "name": "Quotation Software",
     "source": "https://www.refrens.com/free-quotation-software",
     "group": "Products",
-    "module": "documents"
+    "module": "documents",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "e-invoicing",
     "name": "e-Invoicing Software",
     "source": "https://www.refrens.com/e-invoicing-software",
     "group": "Products",
-    "module": "e-invoicing"
+    "module": "e-invoicing",
+    "launchStatus": "Coming soon",
+    "launchDescription": "IRN generation and government submission are not built or connected. GST invoice PDFs are available."
   },
   {
     "id": "e-way-bill",
     "name": "eWay Bill Software",
     "source": "https://www.refrens.com/e-way-bill-software",
     "group": "Products",
-    "module": "e-way-bill"
+    "module": "e-way-bill",
+    "launchStatus": "Coming soon",
+    "launchDescription": "Government eWay Bill generation is not built or connected. Delivery challan PDFs are available."
   },
   {
     "id": "inventory",
     "name": "Inventory Software",
     "source": "https://www.refrens.com/inventory-management-software",
     "group": "Products",
-    "module": "items"
+    "module": "items",
+    "launchStatus": "Basic",
+    "launchName": "Basic inventory records",
+    "launchDescription": "Manage item quantities, rates and reorder levels. Automatic stock movements, warehouses and valuation are coming soon."
   },
   {
     "id": "eagle",
     "name": "Automated Expense Recording",
     "source": "https://www.refrens.com/en-in/refrens-eagle",
     "group": "Products",
-    "module": "expenses"
+    "module": "expenses",
+    "launchStatus": "Coming soon",
+    "launchDescription": "Automated OCR/WhatsApp expense recording is not built. Manual expense entry is available separately.",
+    "preparationService": "expenses"
   },
   {
     "id": "vendors",
     "name": "Vendor Management",
     "source": "https://www.refrens.com/vendor-management-software",
     "group": "Products",
-    "module": "vendors"
+    "module": "vendors",
+    "launchStatus": "Basic",
+    "launchName": "Vendor directory",
+    "launchDescription": "Save vendor contacts and use them in purchase orders. Vendor bills, payment allocation and payable statements are coming soon."
   },
   {
     "id": "api",
     "name": "Invoicing API",
     "source": "https://www.refrens.com/api",
     "group": "Products",
-    "module": "api"
+    "module": "api",
+    "launchStatus": "Coming soon",
+    "launchDescription": "External API keys, a versioned customer API and outbound webhooks are not available. Internal signed-in APIs support this app."
   },
   {
     "id": "sales-crm",
     "name": "Sales CRM",
     "source": "https://www.refrens.com/rf-sales-crm",
     "group": "Products",
-    "module": "leads"
+    "module": "leads",
+    "launchStatus": "Basic",
+    "launchName": "Basic sales CRM",
+    "launchDescription": "Track leads, stages and values; create quotations. Automated lead ingestion and advanced CRM workflows are coming soon."
   },
   {
     "id": "mcp",
     "name": "Refrens MCP",
     "source": "https://www.refrens.com/en-in/refrens-mcp",
     "group": "Products",
-    "module": "mcp"
+    "module": "mcp",
+    "launchStatus": "Coming soon",
+    "launchDescription": "An independent MCP service has not been built. This app does not use Refrens MCP."
   },
   {
     "id": "leads",
     "name": "Lead Management Software",
     "source": "https://www.refrens.com/lead-management-software",
     "group": "Products",
-    "module": "leads"
+    "module": "leads",
+    "launchStatus": "Basic",
+    "launchName": "Basic lead management",
+    "launchDescription": "Add leads, change stages and generate quotations. Automated ingestion is coming soon."
   },
   {
     "id": "subscriptions",
     "name": "Subscription Management Software",
     "source": "https://www.kherpa.com/",
     "group": "Products",
-    "module": "subscriptions"
+    "module": "subscriptions",
+    "launchStatus": "Basic",
+    "launchName": "Recurring invoice schedules",
+    "launchDescription": "Track schedules and generate each invoice manually. Automatic runs, charging and dunning are coming soon."
   },
   {
     "id": "gst-invoice",
@@ -110,7 +148,9 @@
     "source": "https://www.refrens.com/online-gst-invoice-maker",
     "group": "Free Tools",
     "module": "documents",
-    "document": "gst-invoice"
+    "document": "gst-invoice",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "invoice",
@@ -118,7 +158,9 @@
     "source": "https://www.refrens.com/free-online-invoice-generator",
     "group": "Free Tools",
     "module": "documents",
-    "document": "invoice"
+    "document": "invoice",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "quotation",
@@ -126,7 +168,9 @@
     "source": "https://www.refrens.com/free-online-quotation-generator",
     "group": "Free Tools",
     "module": "documents",
-    "document": "quotation"
+    "document": "quotation",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "proforma",
@@ -134,7 +178,9 @@
     "source": "https://www.refrens.com/proforma-invoice-templates",
     "group": "Free Tools",
     "module": "documents",
-    "document": "proforma"
+    "document": "proforma",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "invoice-templates",
@@ -142,7 +188,9 @@
     "source": "https://www.refrens.com/free-invoice-templates",
     "group": "Free Tools",
     "module": "documents",
-    "document": "invoice"
+    "document": "invoice",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "purchase-order",
@@ -150,7 +198,9 @@
     "source": "https://www.refrens.com/online-purchase-order-form",
     "group": "Free Tools",
     "module": "documents",
-    "document": "purchase-order"
+    "document": "purchase-order",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "delivery-challan",
@@ -158,7 +208,9 @@
     "source": "https://www.refrens.com/delivery-challan-format",
     "group": "Free Tools",
     "module": "documents",
-    "document": "delivery-challan"
+    "document": "delivery-challan",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "quotation-templates",
@@ -166,7 +218,9 @@
     "source": "https://www.refrens.com/free-quotation-templates",
     "group": "Free Tools",
     "module": "documents",
-    "document": "quotation"
+    "document": "quotation",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "commercial-invoice",
@@ -174,21 +228,27 @@
     "source": "https://www.refrens.com/en/commercial-invoice-templates",
     "group": "Free Tools",
     "module": "documents",
-    "document": "commercial-invoice"
+    "document": "commercial-invoice",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "android-app",
     "name": "Download Mobile App",
     "source": "https://play.google.com/store/apps/details?id=com.refrens.RefrensApp&pli=1",
     "group": "Free Tools",
-    "module": "mobile"
+    "module": "mobile",
+    "launchStatus": "Coming soon",
+    "launchDescription": "An independent Android app has not been built. Use the web workspace."
   },
   {
     "id": "ios-app",
     "name": "Download iOS App",
     "source": "https://apps.apple.com/in/app/refrens-invoice-maker-bill-app/id6476802238",
     "group": "Free Tools",
-    "module": "mobile"
+    "module": "mobile",
+    "launchStatus": "Coming soon",
+    "launchDescription": "An independent iOS app has not been built. Use the web workspace."
   },
   {
     "id": "consulting-invoice",
@@ -196,91 +256,120 @@
     "source": "https://www.refrens.com/en/consulting-invoice-templates",
     "group": "Free Tools",
     "module": "documents",
-    "document": "invoice"
+    "document": "invoice",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "small-business",
     "name": "SMBs",
     "source": "https://www.refrens.com/accounting-software-for-small-business",
     "group": "Categories",
-    "module": "category"
+    "module": "category",
+    "launchStatus": "Category shortcut",
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
   },
   {
     "id": "consultants",
     "name": "Consultants",
     "source": "https://www.refrens.com/rf-invoicing-software-for-consultants",
     "group": "Categories",
-    "module": "category"
+    "module": "category",
+    "launchStatus": "Category shortcut",
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
   },
   {
     "id": "startups",
     "name": "Startups",
     "source": "https://www.refrens.com/accounting-software-for-startups",
     "group": "Categories",
-    "module": "category"
+    "module": "category",
+    "launchStatus": "Category shortcut",
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
   },
   {
     "id": "chartered-accountants",
     "name": "Chartered Accountant",
     "source": "https://www.refrens.com/refrens-for-ca",
     "group": "Categories",
-    "module": "category"
+    "module": "category",
+    "launchStatus": "Category shortcut",
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
   },
   {
     "id": "export-import",
     "name": "Export/Import Business",
     "source": "https://www.refrens.com/en/commercial-invoice-software",
     "group": "Categories",
-    "module": "category"
+    "module": "category",
+    "launchStatus": "Category shortcut",
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
   },
   {
     "id": "professional-services",
     "name": "Professional Services",
     "source": "https://www.refrens.com/rf-billing-software-for-professional-services",
     "group": "Categories",
-    "module": "category"
+    "module": "category",
+    "launchStatus": "Category shortcut",
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
   },
   {
     "id": "freelancers",
     "name": "Freelancers/Self-Employed",
     "source": "https://www.refrens.com/rf-invoicing-software-for-freelancers",
     "group": "Categories",
-    "module": "category"
+    "module": "category",
+    "launchStatus": "Category shortcut",
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
   },
   {
     "id": "lead-to-quote",
     "name": "Lead to Quote Software",
     "source": "https://www.refrens.com/rf-quote-software-with-lead-management-system",
     "group": "Products",
-    "module": "leads"
+    "module": "leads",
+    "launchStatus": "Basic",
+    "launchName": "Lead to quotation",
+    "launchDescription": "Create a draft quotation from a saved lead. Review customer and tax details before sending."
   },
   {
     "id": "expenses",
     "name": "Expense Management Software",
     "source": "https://www.refrens.com/free-expense-management-software",
     "group": "Products",
-    "module": "expenses"
+    "module": "expenses",
+    "launchStatus": "Basic",
+    "launchName": "Manual expense records",
+    "launchDescription": "Record expenses and reviewed input tax. OCR, automatic ingestion and bank reconciliation are coming soon."
   },
   {
     "id": "quote-and-invoice",
     "name": "Quote and Invoice Software",
     "source": "https://www.refrens.com/rf-quote-and-invoice-software",
     "group": "Products",
-    "module": "documents"
+    "module": "documents",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   },
   {
     "id": "pipeline",
     "name": "Pipeline Management Software",
     "source": "https://www.refrens.com/rf-sales-pipeline-management-software",
     "group": "Products",
-    "module": "leads"
+    "module": "leads",
+    "launchStatus": "Basic",
+    "launchName": "Basic sales pipeline",
+    "launchDescription": "Manage lead stages and export records. Advanced sales automation is coming soon."
   },
   {
     "id": "indiamart",
     "name": "Indiamart CRM Integration",
     "source": "https://www.refrens.com/rf-indiamart-crm-integration",
     "group": "Products",
-    "module": "indiamart"
+    "module": "indiamart",
+    "launchStatus": "Coming soon",
+    "launchDescription": "IndiaMART lead synchronization is not connected. Manual lead management is available."
   },
   {
     "id": "quote-formats",
@@ -288,7 +377,10 @@
     "source": "https://www.refrens.com/quote-templates",
     "group": "Products",
     "module": "documents",
-    "document": "quotation"
+    "document": "quotation",
+    "launchStatus": "Basic",
+    "launchName": "PDF quotation templates",
+    "launchDescription": "Create quotations using PDF templates. Editable Word and Excel template downloads are coming soon."
   },
   {
     "id": "tax-invoice",
@@ -296,6 +388,8 @@
     "source": "https://www.refrens.com/en/tax-invoice-templates",
     "group": "Products",
     "module": "documents",
-    "document": "gst-invoice"
+    "document": "gst-invoice",
+    "launchStatus": "Available",
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
   }
 ]
