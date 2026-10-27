@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Independent Billing Workspace",
-  description: "Invoices and business records on your own Supabase backend.",
+  title: "Folio — Your billing workspace",
+  description: "Create professional invoices and keep your business records together with Folio.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
