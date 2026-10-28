@@ -7,7 +7,8 @@
     "module": "journals",
     "launchStatus": "Basic",
     "launchName": "Manual accounting journals",
-    "launchDescription": "Add balanced journal entries and export CSV. Trial balance, P&L and balance sheet are coming soon."
+    "launchDescription": "Add balanced journal entries and export CSV. Trial balance, P&L and balance sheet are coming soon.",
+    "actionLabel": ""
   },
   {
     "id": "ai-assistant",
@@ -16,7 +17,8 @@
     "group": "Products",
     "module": "assistant",
     "launchStatus": "Coming soon",
-    "launchDescription": "AI accounting is not connected. Manual journals are available separately."
+    "launchDescription": "AI accounting is not connected. Manual journals are available separately.",
+    "actionLabel": ""
   },
   {
     "id": "gst-billing",
@@ -26,7 +28,8 @@
     "module": "documents",
     "launchStatus": "Basic",
     "launchName": "GST invoicing",
-    "launchDescription": "Create GST invoices and review workpapers. Government filing, IRN and eWay Bill submission are coming soon."
+    "launchDescription": "Create GST invoices and review workpapers. Government filing, IRN and eWay Bill submission are coming soon.",
+    "actionLabel": ""
   },
   {
     "id": "invoicing",
@@ -35,7 +38,8 @@
     "group": "Products",
     "module": "documents",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": ""
   },
   {
     "id": "quotation-software",
@@ -44,7 +48,8 @@
     "group": "Products",
     "module": "documents",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": ""
   },
   {
     "id": "e-invoicing",
@@ -53,7 +58,8 @@
     "group": "Products",
     "module": "e-invoicing",
     "launchStatus": "Coming soon",
-    "launchDescription": "IRN generation and government submission are not built or connected. GST invoice PDFs are available."
+    "launchDescription": "IRN generation and government submission are not built or connected. GST invoice PDFs are available.",
+    "actionLabel": ""
   },
   {
     "id": "e-way-bill",
@@ -62,7 +68,8 @@
     "group": "Products",
     "module": "e-way-bill",
     "launchStatus": "Coming soon",
-    "launchDescription": "Government eWay Bill generation is not built or connected. Delivery challan PDFs are available."
+    "launchDescription": "Government eWay Bill generation is not built or connected. Delivery challan PDFs are available.",
+    "actionLabel": ""
   },
   {
     "id": "inventory",
@@ -72,7 +79,8 @@
     "module": "items",
     "launchStatus": "Basic",
     "launchName": "Basic inventory records",
-    "launchDescription": "Manage item quantities, rates and reorder levels. Automatic stock movements, warehouses and valuation are coming soon."
+    "launchDescription": "Manage item quantities, rates and reorder levels. Automatic stock movements, warehouses and valuation are coming soon.",
+    "actionLabel": ""
   },
   {
     "id": "eagle",
@@ -82,7 +90,8 @@
     "module": "expenses",
     "launchStatus": "Coming soon",
     "launchDescription": "Automated OCR/WhatsApp expense recording is not built. Manual expense entry is available separately.",
-    "preparationService": "expenses"
+    "preparationService": "expenses",
+    "actionLabel": ""
   },
   {
     "id": "vendors",
@@ -92,7 +101,8 @@
     "module": "vendors",
     "launchStatus": "Basic",
     "launchName": "Vendor directory",
-    "launchDescription": "Save vendor contacts and use them in purchase orders. Vendor bills, payment allocation and payable statements are coming soon."
+    "launchDescription": "Save vendor contacts and use them in purchase orders. Vendor bills, payment allocation and payable statements are coming soon.",
+    "actionLabel": ""
   },
   {
     "id": "api",
@@ -101,7 +111,8 @@
     "group": "Products",
     "module": "api",
     "launchStatus": "Coming soon",
-    "launchDescription": "External API keys, a versioned customer API and outbound webhooks are not available. Internal signed-in APIs support this app."
+    "launchDescription": "External API keys, a versioned customer API and outbound webhooks are not available. Internal signed-in APIs support this app.",
+    "actionLabel": ""
   },
   {
     "id": "sales-crm",
@@ -111,16 +122,19 @@
     "module": "leads",
     "launchStatus": "Basic",
     "launchName": "Basic sales CRM",
-    "launchDescription": "Track leads, stages and values; create quotations. Automated lead ingestion and advanced CRM workflows are coming soon."
+    "launchDescription": "Track leads, stages and values; create quotations. Automated lead ingestion and advanced CRM workflows are coming soon.",
+    "actionLabel": ""
   },
   {
     "id": "mcp",
-    "name": "Refrens MCP",
+    "name": "Folio MCP",
     "source": "https://www.refrens.com/en-in/refrens-mcp",
     "group": "Products",
     "module": "mcp",
     "launchStatus": "Coming soon",
-    "launchDescription": "An independent MCP service has not been built. This app does not use Refrens MCP."
+    "launchDescription": "An independent MCP service has not been built. This app does not use Folio MCP.",
+    "launchName": "Folio MCP",
+    "actionLabel": ""
   },
   {
     "id": "leads",
@@ -130,7 +144,8 @@
     "module": "leads",
     "launchStatus": "Basic",
     "launchName": "Basic lead management",
-    "launchDescription": "Add leads, change stages and generate quotations. Automated ingestion is coming soon."
+    "launchDescription": "Add leads, change stages and generate quotations. Automated ingestion is coming soon.",
+    "actionLabel": ""
   },
   {
     "id": "subscriptions",
@@ -140,7 +155,8 @@
     "module": "subscriptions",
     "launchStatus": "Basic",
     "launchName": "Recurring invoice schedules",
-    "launchDescription": "Track schedules and generate each invoice manually. Automatic runs, charging and dunning are coming soon."
+    "launchDescription": "Track schedules and generate each invoice manually. Automatic runs, charging and dunning are coming soon.",
+    "actionLabel": ""
   },
   {
     "id": "gst-invoice",
@@ -150,7 +166,8 @@
     "module": "documents",
     "document": "gst-invoice",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create GST invoice"
   },
   {
     "id": "invoice",
@@ -160,7 +177,8 @@
     "module": "documents",
     "document": "invoice",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create invoice"
   },
   {
     "id": "quotation",
@@ -170,17 +188,20 @@
     "module": "documents",
     "document": "quotation",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create quotation"
   },
   {
     "id": "proforma",
-    "name": "Creator Proforma Invoice",
+    "name": "Proforma invoice",
     "source": "https://www.refrens.com/proforma-invoice-templates",
     "group": "Free Tools",
     "module": "documents",
     "document": "proforma",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "launchName": "Proforma invoice",
+    "actionLabel": "Create proforma invoice"
   },
   {
     "id": "invoice-templates",
@@ -190,7 +211,8 @@
     "module": "documents",
     "document": "invoice",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create invoice"
   },
   {
     "id": "purchase-order",
@@ -200,7 +222,8 @@
     "module": "documents",
     "document": "purchase-order",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create purchase order"
   },
   {
     "id": "delivery-challan",
@@ -210,7 +233,8 @@
     "module": "documents",
     "document": "delivery-challan",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create delivery challan"
   },
   {
     "id": "quotation-templates",
@@ -220,7 +244,8 @@
     "module": "documents",
     "document": "quotation",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create quotation"
   },
   {
     "id": "commercial-invoice",
@@ -230,25 +255,30 @@
     "module": "documents",
     "document": "commercial-invoice",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create commercial invoice"
   },
   {
     "id": "android-app",
-    "name": "Download Mobile App",
+    "name": "Android app",
     "source": "https://play.google.com/store/apps/details?id=com.refrens.RefrensApp&pli=1",
     "group": "Free Tools",
     "module": "mobile",
     "launchStatus": "Coming soon",
-    "launchDescription": "An independent Android app has not been built. Use the web workspace."
+    "launchDescription": "An independent Android app has not been built. Use the web workspace.",
+    "launchName": "Android app",
+    "actionLabel": ""
   },
   {
     "id": "ios-app",
-    "name": "Download iOS App",
+    "name": "iOS app",
     "source": "https://apps.apple.com/in/app/refrens-invoice-maker-bill-app/id6476802238",
     "group": "Free Tools",
     "module": "mobile",
     "launchStatus": "Coming soon",
-    "launchDescription": "An independent iOS app has not been built. Use the web workspace."
+    "launchDescription": "An independent iOS app has not been built. Use the web workspace.",
+    "launchName": "iOS app",
+    "actionLabel": ""
   },
   {
     "id": "consulting-invoice",
@@ -258,7 +288,8 @@
     "module": "documents",
     "document": "invoice",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create invoice"
   },
   {
     "id": "small-business",
@@ -267,7 +298,8 @@
     "group": "Categories",
     "module": "category",
     "launchStatus": "Category shortcut",
-    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product.",
+    "actionLabel": ""
   },
   {
     "id": "consultants",
@@ -276,7 +308,8 @@
     "group": "Categories",
     "module": "category",
     "launchStatus": "Category shortcut",
-    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product.",
+    "actionLabel": ""
   },
   {
     "id": "startups",
@@ -285,7 +318,8 @@
     "group": "Categories",
     "module": "category",
     "launchStatus": "Category shortcut",
-    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product.",
+    "actionLabel": ""
   },
   {
     "id": "chartered-accountants",
@@ -294,7 +328,8 @@
     "group": "Categories",
     "module": "category",
     "launchStatus": "Category shortcut",
-    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product.",
+    "actionLabel": ""
   },
   {
     "id": "export-import",
@@ -303,7 +338,8 @@
     "group": "Categories",
     "module": "category",
     "launchStatus": "Category shortcut",
-    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product.",
+    "actionLabel": ""
   },
   {
     "id": "professional-services",
@@ -312,7 +348,8 @@
     "group": "Categories",
     "module": "category",
     "launchStatus": "Category shortcut",
-    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product.",
+    "actionLabel": ""
   },
   {
     "id": "freelancers",
@@ -321,7 +358,8 @@
     "group": "Categories",
     "module": "category",
     "launchStatus": "Category shortcut",
-    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product."
+    "launchDescription": "A shortcut to the same document and record tools. This is not a separate industry-specific product.",
+    "actionLabel": ""
   },
   {
     "id": "lead-to-quote",
@@ -331,7 +369,8 @@
     "module": "leads",
     "launchStatus": "Basic",
     "launchName": "Lead to quotation",
-    "launchDescription": "Create a draft quotation from a saved lead. Review customer and tax details before sending."
+    "launchDescription": "Create a draft quotation from a saved lead. Review customer and tax details before sending.",
+    "actionLabel": ""
   },
   {
     "id": "expenses",
@@ -341,7 +380,8 @@
     "module": "expenses",
     "launchStatus": "Basic",
     "launchName": "Manual expense records",
-    "launchDescription": "Record expenses and reviewed input tax. OCR, automatic ingestion and bank reconciliation are coming soon."
+    "launchDescription": "Record expenses and reviewed input tax. OCR, automatic ingestion and bank reconciliation are coming soon.",
+    "actionLabel": ""
   },
   {
     "id": "quote-and-invoice",
@@ -350,7 +390,8 @@
     "group": "Products",
     "module": "documents",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": ""
   },
   {
     "id": "pipeline",
@@ -360,7 +401,8 @@
     "module": "leads",
     "launchStatus": "Basic",
     "launchName": "Basic sales pipeline",
-    "launchDescription": "Manage lead stages and export records. Advanced sales automation is coming soon."
+    "launchDescription": "Manage lead stages and export records. Advanced sales automation is coming soon.",
+    "actionLabel": ""
   },
   {
     "id": "indiamart",
@@ -369,7 +411,8 @@
     "group": "Products",
     "module": "indiamart",
     "launchStatus": "Coming soon",
-    "launchDescription": "IndiaMART lead synchronization is not connected. Manual lead management is available."
+    "launchDescription": "IndiaMART lead synchronization is not connected. Manual lead management is available.",
+    "actionLabel": ""
   },
   {
     "id": "quote-formats",
@@ -380,7 +423,8 @@
     "document": "quotation",
     "launchStatus": "Basic",
     "launchName": "PDF quotation templates",
-    "launchDescription": "Create quotations using PDF templates. Editable Word and Excel template downloads are coming soon."
+    "launchDescription": "Create quotations using PDF templates. Editable Word and Excel template downloads are coming soon.",
+    "actionLabel": "Create quotation"
   },
   {
     "id": "tax-invoice",
@@ -390,6 +434,7 @@
     "module": "documents",
     "document": "gst-invoice",
     "launchStatus": "Available",
-    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included."
+    "launchDescription": "Create, save, reopen and download document PDFs. Live payment collection and message delivery are not included.",
+    "actionLabel": "Create GST invoice"
   }
 ]
