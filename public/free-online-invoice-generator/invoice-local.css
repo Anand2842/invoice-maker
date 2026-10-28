@@ -14,3 +14,11 @@ form .RXXMG::after,form .iegBmO::after,[role="dialog"] .RXXMG::after{border:2px 
 .independent-tax-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 0;border-top:1px solid #ddd}.independent-tax-controls label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.independent-tax-controls p{width:100%;margin:0}.independent-tax-controls input:not([type=checkbox]){min-width:180px;max-width:100%;padding:8px}.independent-extra-field:has([data-cess-rate]){min-width:100px;max-width:150px;padding:8px}.independent-extra-field [data-cess-rate]{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px}
 
 .gst-reporting-controls{width:100%;padding:10px 0}.gst-reporting-controls summary{cursor:pointer;font-weight:600}.gst-reporting-controls label{margin:12px 0}.gst-reporting-controls select{max-width:100%;padding:8px}.independent-extra-field:has(input[name$=".uqc"]){min-width:100px;max-width:160px}
+
+/* Keep supplementary item fields together below the main line-item grid. */
+.folio-item-extras{display:flex;flex-wrap:wrap;gap:16px;padding:12px 8px;margin-top:8px;border-top:1px solid #e5e0e7;clear:both}
+.folio-item-extras .independent-extra-field{flex:0 1 170px;min-width:0;max-width:170px;padding:0;font:12px/1.5 'Folio Sans',Arial,sans-serif;color:#69636f}
+.folio-item-extras input{box-sizing:border-box;width:100%;min-width:0;height:36px;background:#fff;font:14px 'Folio Sans',Arial,sans-serif;color:#292333}
+@media(max-width:568px){.folio-item-extras{gap:12px}.folio-item-extras .independent-extra-field{flex:1 1 110px}}
+
+.folio-editor [data-folio-primary]{background:#6542a6!important;border-color:#6542a6!important;color:#fff!important}

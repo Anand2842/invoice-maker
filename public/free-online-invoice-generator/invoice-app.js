@@ -113,7 +113,43 @@
     }catch(error){if(!form){mount=document.getElementById('invoice-editor-mount');if(mount){const message=document.createElement('p');message.setAttribute('role','alert');message.textContent=error.message;const retry=document.createElement('button');retry.textContent='Try again';retry.onclick=()=>{draftContext=null;openEditor()};mount.replaceChildren(message,retry)}}else status(error.message,true);if(button){button.disabled=false;button.title=error.message}}
   }
   let fieldSequence=0;
-  function labelFields(){if(!form)return;for(const [name,labelName]of Object.entries({invoiceNumber:'customLabels.invoiceNumber',invoiceDate:'customLabels.invoiceDate',dueDate:'customLabels.dueDate'})){const input=q('input[name="'+name+'"]',form),label=q('[name="'+labelName+'"]',form);if(input&&label){qa('label.folio-field-label',form).filter(x=>x.htmlFor===input.id).forEach(x=>x.remove());label.id ||= 'folio-label-'+(++fieldSequence);input.setAttribute('aria-labelledby',label.id)}}const seen=new Set();qa('[id]',form).forEach(e=>{if(seen.has(e.id))e.id='folio-control-'+(++fieldSequence);seen.add(e.id)});for(const input of qa('input:not([type=hidden]),select,textarea',form)){if(input.labels?.length||input.getAttribute('aria-label')||input.getAttribute('aria-labelledby'))continue;const name=input.name||'',base=name.replace(/^.*\./,'').replace(/([A-Z])/g,' $1').replace(/[_-]/g,' ').trim(),party=name.startsWith('billedBy.')?'Seller ':name.startsWith('billedTo.')?'Customer ':'';const title={invoiceNumber:documentTypes[documentType]+' number',invoiceDate:documentTypes[documentType]+' date',dueDate:'Due date',logo:'Business logo'}[name]||party+(input.placeholder&&!['Select Date',''].includes(input.placeholder)?input.placeholder:base||'Document field');input.setAttribute('aria-label',title);const existingLabel={invoiceNumber:'customLabels.invoiceNumber',invoiceDate:'customLabels.invoiceDate',dueDate:'customLabels.dueDate'}[name];const control=existingLabel&&q('[name="'+existingLabel+'"]',form);if(control){control.id ||= 'folio-label-'+(++fieldSequence);input.setAttribute('aria-labelledby',control.id);continue}if(input.type==='file'||input.type==='checkbox'||input.type==='radio')continue;input.id ||= 'folio-field-'+(++fieldSequence);const label=document.createElement('label');label.className='folio-field-label';label.htmlFor=input.id;label.textContent=title;input.before(label)}}
+  function labelFields(){
+    if(!form)return;
+    // Older drafts contain generated labels inside fixed-height source controls.
+    // Remove those presentation nodes without changing any entered values.
+    qa('label.folio-field-label',form).forEach(label=>label.remove());
+    // Optional-field source fragments used to bring a second phone/GSTIN along.
+    for(const prefix of ['billedBy','billedTo'])for(const key of ['phone','gstin']){
+      const inputs=qa('input[name="'+prefix+'.'+key+'"]',form),first=inputs.shift();
+      for(const duplicate of inputs){
+        if(!first.value&&duplicate.value)first.value=duplicate.value;
+        const row=duplicate.closest(cl('BusinessDetails_businessDetailsRowFieldsWrapper'));
+        if(!row)continue;
+        let field=duplicate;while(field.parentElement&&field.parentElement!==row)field=field.parentElement;
+        if(field.parentElement===row)field.remove();
+        if(!row.children.length)row.closest(cl('BusinessDetails_fieldSmallest'))?.remove();
+      }
+    }
+    const seen=new Set();
+    qa('[id]',form).forEach(element=>{if(seen.has(element.id))element.id='folio-control-'+(++fieldSequence);seen.add(element.id)});
+    const documentLabels={invoiceNumber:'customLabels.invoiceNumber',invoiceDate:'customLabels.invoiceDate',dueDate:'customLabels.dueDate'};
+    const partyFields={name:'business name',phone:'phone',gstin:'GSTIN',address:'address',city:'city',street:'address',pincode:'postal code',postalCode:'postal code',country:'country',gstState:'state',email:'email',pan:'PAN',panNumber:'PAN'};
+    for(const input of qa('input:not([type=hidden]),select,textarea',form)){
+      const name=input.name||'',key=name.replace(/^.*\./,''),party=name.startsWith('billedBy.')?(documentType==='purchase-order'?'Vendor':'Seller'):name.startsWith('billedTo.')?(documentType==='purchase-order'?'Buyer':'Customer'):'';
+      const sourceLabel=documentLabels[name]&&q('[name="'+documentLabels[name]+'"]',form);
+      if(sourceLabel){
+        input.id ||= 'folio-field-'+(++fieldSequence);
+        sourceLabel.id ||= 'folio-label-'+(++fieldSequence);
+        sourceLabel.htmlFor=input.id;
+        input.setAttribute('aria-labelledby',sourceLabel.id);
+        continue;
+      }
+      if(party){input.setAttribute('aria-label',party+' '+(partyFields[key]||input.placeholder||key));if(key==='pincode')input.placeholder='Postal code';continue}
+      if(input.labels?.length||input.getAttribute('aria-label')||input.getAttribute('aria-labelledby'))continue;
+      const fallback=key.replace(/([A-Z])/g,' $1').replace(/[_-]/g,' ').trim();
+      input.setAttribute('aria-label',name==='logo'?'Business logo':input.placeholder||fallback||'Document field');
+    }
+  }
   function bindForm(){
       form.removeAttribute('method');form.addEventListener('submit',e=>{e.preventDefault();continueSignup()});
       qa('input[name$=".rate"]',form).forEach(e=>{e.min='0';e.step='0.01'});
@@ -177,7 +213,7 @@
     qa('button',overlay).forEach(button=>{const text=button.textContent.trim();if(text==='Cancel')button.addEventListener('click',overlay.closeSource);if(text==='Reset')button.addEventListener('click',()=>{context.clearRect(0,0,canvas.width,canvas.height);if(placeholder)placeholder.style.visibility='' });if(text==='Upload Signature')button.addEventListener('click',()=>{setSignature(canvas.toDataURL('image/png'));overlay.closeSource()})});
   }
   function ensureCessFields(){
-    qa(cl('LineItems_lineItemContainer'),form).forEach((row,i)=>{if(!q('input[name$=".uqc"]',row)){const label=document.createElement('label');label.className='independent-extra-field';label.textContent='Unit code (GST reports)';const input=document.createElement('input');input.name='items['+i+'].uqc';input.placeholder='NOS / KGS / NA';input.maxLength=3;input.setAttribute('aria-label','Item '+(i+1)+' unit code');input.addEventListener('input',()=>{input.value=input.value.toUpperCase()});label.append(input);row.append(label)}if(!q('[data-cess-rate]',row)){const label=document.createElement('label');label.className='independent-extra-field';label.textContent='Cess %';const input=document.createElement('input');input.type='number';input.min='0';input.max='1000';input.step='0.001';input.name='items['+i+'].cessRate';input.value='0';input.dataset.cessRate='true';input.setAttribute('aria-label','Item '+(i+1)+' cess percentage');label.append(input);row.append(label)}});
+    qa(cl('LineItems_lineItemContainer'),form).forEach((row,i)=>{if(!q('input[name$=".uqc"]',row)){const label=document.createElement('label');label.className='independent-extra-field';label.textContent='Unit code (GST reports)';const input=document.createElement('input');input.name='items['+i+'].uqc';input.placeholder='NOS / KGS / NA';input.maxLength=3;input.setAttribute('aria-label','Item '+(i+1)+' unit code');input.addEventListener('input',()=>{input.value=input.value.toUpperCase()});label.append(input);row.append(label)}if(!q('[data-cess-rate]',row)){const label=document.createElement('label');label.className='independent-extra-field';label.textContent='Cess %';const input=document.createElement('input');input.type='number';input.min='0';input.max='1000';input.step='0.001';input.name='items['+i+'].cessRate';input.value='0';input.dataset.cessRate='true';input.setAttribute('aria-label','Item '+(i+1)+' cess percentage');label.append(input);row.append(label)}let extras=q('.folio-item-extras',row);if(!extras){extras=document.createElement('div');extras.className='folio-item-extras';row.append(extras)}qa('.independent-extra-field',row).forEach(label=>{if(label.parentElement!==extras)extras.append(label)})});
   }
   async function cessDialog(){ensureCessFields();qa('.local-select-overlay',document).forEach(e=>e.remove());status('Enter the percentage cess on each item. It applies to the discounted taxable amount. Specific per-unit levies are not supported.');q('[data-cess-rate]',form)?.focus()}
   function applyAdjustmentLocks(){
@@ -233,7 +269,14 @@
   function optional(button,key){
     if(!templates[key])return;const e=adapt(parse(templates[key]),layout());
     if(key==='dueDate'){button.closest(cl('Headers_fieldRowLg')).replaceWith(e);prepareDates()}
-    else if(key.includes('.')){const card=button.closest(cl('BusinessDetails_cardWrapper'));const grid=q(':scope > div',card)||card;grid.append(e);button.remove()}
+    else if(key.includes('.')){
+      const card=button.closest(cl('BusinessDetails_cardWrapper')),grid=q(':scope > div',card)||card;
+      const requested=q('input[name="'+key+'"]',e),row=requested?.closest(cl('BusinessDetails_businessDetailsRowFieldsWrapper'));
+      if(row)for(const field of [...row.children])if(!field.contains(requested))field.remove();
+      const actions=q(cl('BusinessDetails_businessDetailsAddFieldsWrapper'),grid);
+      if(actions)actions.before(e);else grid.append(e);
+      button.remove();
+    }
     else{q(cl('FormButtons_buttonWrapper'),form).before(e);button.remove();if(key==='notes'){qa('.ProseMirror',e).forEach(n=>n.setAttribute('contenteditable','true'));wireRichEditor(e,'Additional Notes')}}
     prepareNames();prepareSelects();update();
   }
@@ -411,7 +454,7 @@
     try{await fetch('/api/auth');const workspace=await fetch('/api/workspace').then(r=>r.json());const selected=params.get('business')||editorBusiness,business=workspace.businesses?.find(b=>b.id===selected)?.id;if(!business)throw Error('Sign in and select the document business in Workspace, then reopen this document.');const response=await fetch('/api/records?'+new URLSearchParams({business,collection:'documents',id,demo:String(params.get('demo')==='true')})),r=await response.json();if(!response.ok||!r.records?.[0])throw Error(r.error||'Document not found in this business. Return to Workspace and select its business.');savedRecord=r.records[0];isDemo=savedRecord.demo;applyDocument(savedRecord.data);documentLoadError='';status('Opened '+savedRecord.data.number+' from your business.');}
     catch(e){documentLoadError=e.message;status(e.message,true)}finally{documentLoading=false;form.inert=false;qa('[data-action]',q('[data-document-toolbar]')).forEach(b=>b.disabled=Boolean(documentLoadError)&&b.dataset.action!=='new');applyAdjustmentLocks()}
   }
-  function applyDocumentLabels(){const title=documentTypes[documentType];document.title=title+' — Folio';q('[data-document-heading]').textContent=title;for(const [name,content]of [['description','Create a '+title.toLowerCase()+' with Folio. Review your details, choose a PDF design and download.'],['robots','noindex']]){let meta=q('meta[name="'+name+'"]',document.head);if(!meta){meta=document.createElement('meta');meta.name=name;document.head.append(meta)}meta.content=content}let canonical=q('link[rel=canonical]',document.head);if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.append(canonical)}canonical.href=new URL('/free-online-invoice-generator/?document='+documentType,location.origin).href;qa('h2').filter(e=>e.textContent.includes('Invoice generator (')).forEach(e=>e.textContent=title+' generator');txt(form,'[name=invoiceTitle]',title);txt(form,'[name="customLabels.invoiceNumber"]',title+' No');txt(form,'[name="customLabels.invoiceDate"]',title+' Date');if(documentType==='purchase-order')qa('h2,h3,label,span',form).filter(e=>e.children.length===0&&['Billed By','Billed To'].includes(e.textContent.trim())).forEach(e=>e.textContent=e.textContent.trim()==='Billed By'?'Vendor / Supplier':'Buyer');}
+  function applyDocumentLabels(){const title=documentTypes[documentType];document.title=title+' — Folio';q('[data-document-heading]').textContent=title;for(const [name,content]of [['description','Create a '+title.toLowerCase()+' with Folio. Review your details, choose a PDF design and download.'],['robots','noindex']]){let meta=q('meta[name="'+name+'"]',document.head);if(!meta){meta=document.createElement('meta');meta.name=name;document.head.append(meta)}meta.content=content}let canonical=q('link[rel=canonical]',document.head);if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.append(canonical)}canonical.href=new URL('/free-online-invoice-generator/?document='+documentType,location.origin).href;qa('h2').filter(e=>e.textContent.includes('Invoice generator (')).forEach(e=>e.textContent=title+' generator');txt(form,'[name=invoiceTitle]',title);txt(form,'[name="customLabels.invoiceNumber"]','Number');txt(form,'[name="customLabels.invoiceDate"]','Issue date');if(documentType==='purchase-order')qa('h2,h3,label,span',form).filter(e=>e.children.length===0&&['Billed By','Billed To'].includes(e.textContent.trim())).forEach(e=>e.textContent=e.textContent.trim()==='Billed By'?'Vendor / Supplier':'Buyer');}
 
   async function normalizedImage(file){
     if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>5242880)throw Error('Use a PNG, JPEG or WebP image up to 5 MB.');
@@ -441,7 +484,7 @@
   function setupToolbar(){
     q('[data-document-toolbar]')?.remove();const bar=document.createElement('section');bar.dataset.documentToolbar='true';bar.className='independent-document-toolbar';bar.innerHTML='<div class="independent-document-actions"><strong>'+documentTypes[documentType]+'</strong><button type="button" data-action="new">New document</button><button type="button" data-action="demo">Load demo data</button><button type="button" data-action="save">Save to account</button><button type="button" data-action="preview">Preview PDF</button><button type="button" data-action="download">Download PDF</button><button type="button" data-action="share">Share &amp; send</button></div><div class="independent-document-actions"><label>PDF design <select data-pdf-template aria-label="PDF design"><option value="classic">Classic</option><option value="modern">Modern</option><option value="minimal">Minimal</option><option value="elegant">Elegant</option><option value="compact">Compact</option></select></label><button type="button" data-action="client">Choose saved client</button><button type="button" data-action="item">Add saved item</button></div><p data-document-status role="status">Your draft stays in this browser. Save to your account to keep it across devices.</p>';
     mount.before(bar);setupTaxControls();const actions={new:newDocument,demo:loadDemo,save:saveDocument,preview:previewDocument,download:downloadDocument,share:async()=>{const record=await saveDocument();if(record){const {openDelivery}=await import('/document-delivery.js');await openDelivery(record,r=>{savedRecord=r;saveDraft()})}},client:()=>openCatalog(documentType==='purchase-order'?'vendors':'clients'),item:()=>openCatalog('items')};const design=q('[data-pdf-template]',bar);design.value=state.template;design.addEventListener('change',()=>{state.template=design.value;saveDraft();status('PDF design: '+design.selectedOptions[0].text+'. Open Preview PDF to see it.');});if(state.adjustment){q('[data-action=client]',bar).disabled=true;q('[data-action=demo]',bar).disabled=true;q('[data-action=new]',bar).disabled=true;}if(documentType==='purchase-order')q('[data-action=client]',bar).textContent='Choose saved vendor';bar.addEventListener('click',e=>{const key=e.target.closest('[data-action]')?.dataset.action;if(key)actions[key]()});
-    qa('button',form).filter(b=>b.textContent.trim()==='Save & Continue').forEach(b=>{b.textContent='Preview & Download';b.addEventListener('click',e=>{e.preventDefault();previewDocument()})});
+    qa('button',form).filter(b=>b.textContent.trim()==='Save & Continue').forEach(b=>{b.textContent='Preview & Download';b.dataset.folioPrimary='true';b.addEventListener('click',e=>{e.preventDefault();previewDocument()})});
 
     window.RefrensNavigation?.normalize(document);
   }
