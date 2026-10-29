@@ -77,3 +77,7 @@ Credentials are excluded from reports and application source. Runtime requests u
 - No vendor liabilities are inferred from purchase orders or expenses. Vendor statements require the vendor-bill/payment model. Payment entry UI, numbered receipts and refunds remain next.
 - Statements cap source records at 10,000 and PDF movements at 2,000. Unsupported scripts require CSV because the PDF font is Latin/WinAnsi. The dashboard still has its earlier pending-balance definition and must be reconciled with the new settlement model in the next payment batch.
 - Evidence: `../reports/phase4-2026-10-26` outside checkout, including PDF/CSV downloads, screenshot, API/DB results and detailed HTML report.
+
+## 29 October 2026 — parity implementation started
+
+See [PARITY-PROGRESS.md](PARITY-PROGRESS.md) for the first receivables/payment-validation increment and its remaining database gates. This dated entry supersedes older pending-balance descriptions: dashboard and receivables both use the client-statement settlement calculation. Payment entry, receipts, allocations and reversals remain unfinished.
