@@ -38,3 +38,10 @@ test('receipt PDF uses saved snapshot and checks reversal status before download
  let calls=0;const sb=async path=>{calls++;return{ok:true,data:path.includes('reversalOf')?[]:[snapshot]}};
  const r=await paymentGET(new Request('https://folio.example/api/payments?'+new URLSearchParams({business,payment,format:'pdf'})),{...deps,sb});assert.equal(r.status,200);assert.equal(r.headers.get('content-type'),'application/pdf');assert.ok((await r.arrayBuffer()).byteLength>1000);assert.equal(calls,2);
 });
+
+test('Unicode print uses only receipt snapshots and verifies reversals under the same record scope',async()=>{
+ const snapshot={id:payment,business_id:business,demo:true,data:{kind:'receipt',number:'DEMO-RCT-000001',date:'2026-10-29',amount:'25.00',currency:'INR',invoiceNumber:'INV-001',seller:{name:'फोलियो'},buyer:{name:'ग्राहक <script>bad()</script>'},method:'Cash'}};
+ let calls=0;const sb=async path=>{calls++;const url=new URL(path,'https://db.example');assert.equal(url.searchParams.get('business_id'),'eq.'+business);assert.equal(url.searchParams.get('demo'),'eq.true');return{ok:true,data:path.includes('reversalOf')?[]:[snapshot]}};
+ const r=await paymentGET(new Request('https://folio.example/api/payments?'+new URLSearchParams({business,payment,demo:'true',format:'print'})),{...deps,sb});
+ assert.equal(r.status,200);assert.match(r.headers.get('content-type'),/text\/html/);assert.match(r.headers.get('content-security-policy'),/default-src 'none'/);const html=await r.text();assert.match(html,/फोलियो/);assert.match(html,/&lt;script&gt;/);assert.equal(calls,2);
+});

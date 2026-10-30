@@ -1,3 +1,4 @@
+import{openPrint}from'/print-open.js';
 import {api} from '/workspace-shell.js';
 import {businessDate,businessTimeZone} from '/business-date.js';
 
@@ -178,7 +179,7 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
      catch (error) {downloadStatus.textContent = error.message || 'The receipt could not be downloaded.'; downloadStatus.classList.add('fp-error');}
      finally {download.disabled = false;}
     });
-    actions.append(download); card.append(downloadStatus);
+    actions.append(download,button('Print / Save PDF',async()=>{try{await openPrint('/api/payments?'+query({payment:record.id,format:'print'}))}catch(error){downloadStatus.textContent=error.message;downloadStatus.classList.add('fp-error')}})); card.append(downloadStatus);
    }
    if (!reversal && !reversed.has(record.id) && writable && !pending && !corruptPending) actions.append(button('Reverse record', () => renderForm(record)));
    if (actions.childNodes.length) card.append(actions);
