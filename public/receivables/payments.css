@@ -1,0 +1,39 @@
+.folio-payments{box-sizing:border-box;width:min(760px,calc(100vw - 32px));max-height:calc(100dvh - 40px);margin:auto;padding:24px;border:1px solid #dcd5e7;border-radius:16px;background:#faf9f6;color:#292333;box-shadow:0 24px 80px #29233340;font-family:inherit;overflow:auto;overscroll-behavior:contain}
+.folio-payments::backdrop{background:#21182f80;backdrop-filter:blur(2px)}
+.folio-payments *{box-sizing:border-box}
+.folio-payments .fp-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:0;margin:0;background:none;border:0;position:static}
+.folio-payments h2{margin:0;font-size:24px;line-height:1.3;overflow-wrap:anywhere}
+.folio-payments h3{font-size:18px;line-height:1.4;margin:0 0 12px}
+.folio-payments h4{font-size:15px;line-height:1.4;margin:0;overflow-wrap:anywhere}
+.folio-payments p{line-height:1.55;margin:8px 0;overflow-wrap:anywhere}
+.folio-payments .fp-intro,.folio-payments .fp-muted,.folio-payments .fp-empty{color:#655e6e;font-size:14px}
+.folio-payments .fp-status{min-height:24px;font-size:14px;margin:16px 0}
+.folio-payments .fp-error{color:#a12932}
+.folio-payments .fp-notice,.folio-payments .fp-pending{padding:16px;border:1px solid #dcd0ef;background:#f1edf8;border-radius:10px;margin:12px 0 20px}
+.folio-payments .fp-pending h3{margin-bottom:6px}
+.folio-payments .fp-history{margin:22px 0}
+.folio-payments .fp-payment{border:1px solid #e2dce9;border-radius:10px;padding:16px;background:#fff;margin:12px 0}
+.folio-payments .fp-reversal{background:#f4f1ed;border-color:#ded6cf}
+.folio-payments .fp-payment-top{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+.folio-payments .fp-payment-top>strong{font-size:16px;flex-shrink:0}
+.folio-payments .fp-details{margin:12px 0;font-size:14px}
+.folio-payments .fp-details>div{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;margin:7px 0}
+.folio-payments dt{font-weight:500;color:#655e6e}
+.folio-payments dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.folio-payments .fp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.folio-payments button{font:inherit;font-size:14px;line-height:1.3;min-height:42px;cursor:pointer;padding:10px 14px;border:1px solid #bfb0d3;border-radius:7px;background:#fff;color:#513181;max-width:100%;white-space:normal}
+.folio-payments button:hover:not(:disabled){background:#eee7f7}
+.folio-payments button:disabled{cursor:wait;opacity:.55}
+.folio-payments .fp-primary{color:#fff;background:#6542a6;border-color:#6542a6;font-weight:600}
+.folio-payments .fp-primary:hover:not(:disabled){background:#52348c}
+.folio-payments .fp-close{flex-shrink:0}
+.folio-payments :is(button,input,textarea):focus-visible{outline:3px solid #a58acb;outline-offset:3px}
+.folio-payments .fp-form{margin:24px 0 0;padding:20px 0 4px;border-top:1px solid #dcd5e7}
+.folio-payments .fp-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.folio-payments .fp-field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.folio-payments .fp-wide{grid-column:1/-1}
+.folio-payments label{font-size:14px;font-weight:500;line-height:1.4}
+.folio-payments :is(input,textarea){display:block;min-height:44px;width:100%;padding:10px 12px;border:1px solid #cfc6d9;border-radius:7px;background:#fff;color:#292333;font:inherit;font-size:16px;line-height:1.4}
+.folio-payments textarea{min-height:96px;resize:vertical}
+.folio-payments .fp-download-status{font-size:13px;margin:8px 0 0}
+@media(max-width:560px){.folio-payments{width:calc(100vw - 16px);max-height:calc(100dvh - 16px);padding:18px 16px;border-radius:12px}.folio-payments h2{font-size:21px}.folio-payments .fp-header{gap:12px}.folio-payments .fp-payment-top{flex-direction:column;gap:7px}.folio-payments .fp-details>div{grid-template-columns:1fr;gap:3px;margin:12px 0}.folio-payments .fp-fields{grid-template-columns:1fr}.folio-payments .fp-payment{padding:14px}.folio-payments .fp-actions>button{flex:1 1 150px}}

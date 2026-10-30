@@ -81,3 +81,7 @@ Credentials are excluded from reports and application source. Runtime requests u
 ## 29 October 2026 — parity implementation started
 
 See [PARITY-PROGRESS.md](PARITY-PROGRESS.md) for the first receivables/payment-validation increment and its remaining database gates. This dated entry supersedes older pending-balance descriptions: dashboard and receivables both use the client-statement settlement calculation. Payment entry, receipts, allocations and reversals remain unfinished.
+
+## 30 October 2026 — payment foundation prepared
+
+Payment history and reversal-aware projections are implemented. Atomic single-invoice receipt/reversal commands, snapshot receipt PDFs and recovery UI have local SQL/browser evidence. Production activation awaits database access, preflight, restore rehearsal and multi-connection tests. See [PAYMENT-ACTIVATION.md](PAYMENT-ACTIVATION.md); earlier unfinished payment entries are historical notes, not an activation claim.

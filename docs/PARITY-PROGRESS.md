@@ -28,3 +28,7 @@ Reports still use current active records and dates, with the existing 10,000-rec
 ## Backlog disposition
 
 T02: source inventory complete; production audit pending. T04: initial dated financial fixtures added; staging/restore and full journey gates pending. T05: compatible payment/read contract implemented; full command/schema contracts pending. T12: read-only collections view implemented; entry/receipt/correction flows pending. No whole parity task is marked Done by this increment.
+
+## 30 October 2026 — iteration 2
+
+Implemented payment history, locally tested atomic payment/receipt/reversal commands, exact retry recovery, receipt PDFs and reversal-aware statements/dashboard. 224 tests pass. See [PAYMENT-ACTIVATION.md](PAYMENT-ACTIVATION.md) for evidence, the read-only preflight and production activation gates. The new migration has not been applied to production; entry remains unavailable until database verification and activation. No whole parity package is marked Done.
