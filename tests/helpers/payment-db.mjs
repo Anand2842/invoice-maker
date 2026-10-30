@@ -18,7 +18,7 @@ export async function paymentDatabase(){
  `);
  const migrations=new URL('../../supabase/migrations/',import.meta.url);
  // Sharing uses pgcrypto, outside this WASM engine and the payment dependency graph.
- for(const file of (await readdir(migrations)).filter(f=>f.endsWith('.sql')&&f!=='202610230001_document_sharing.sql').sort())await db.exec(await readFile(new URL(file,migrations),'utf8'));
+ for(const file of (await readdir(migrations)).filter(f=>f.endsWith('.sql')&&!['202610230001_document_sharing.sql','202610300001_share_grants.sql'].includes(f)).sort())await db.exec(await readFile(new URL(file,migrations),'utf8'));
  const owner=randomUUID(),viewer=randomUUID(),outsider=randomUUID(),business=randomUUID();
  await db.query('insert into auth.users(id) values($1),($2),($3)',[owner,viewer,outsider]);
  await db.query("insert into public.billing_businesses(id,owner_id,name) values($1,$2,'Synthetic payment test business')",[business,owner]);

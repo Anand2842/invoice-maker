@@ -1,35 +1,33 @@
-# Payment foundation — activation and remaining gates
+# Payment foundation — production status and remaining scope
 
-30 October 2026. Implemented and tested locally; **the production payment migration has not been applied**. Existing hosted data has not been rewritten. The Supabase dashboard is signed out and no database credentials are available in this execution session.
+30 October 2026. **The production payment command migration is applied** to Supabase project `digewoxoqblxlfnekjmc`. Readiness API version 1 enables single-invoice incoming receipts and full dated reversals for existing permitted roles. No funds were moved, no provider messages were sent and none of the 88 existing records were rewritten. The hosted Site remains owner-private.
 
-## Delivered source
+## Production evidence
 
-- Single-invoice incoming payment commands with an authenticated business/demo boundary, expected invoice version, exact positive amounts and a stable command UUID.
-- One transaction creates the immutable typed payment event, report-compatible record, numbered receipt, existing audit record and outbox entry. No email, gateway charge or refund runs in that transaction.
-- Full linked reversals add a positive event on their own effective date; the statement debits that event and retains the original receipt. Historical as-of balances remain unchanged before the reversal date.
-- New events and compatibility rows cannot be edited or archived directly. Invoices with recorded payments retain their financial identity; corrections use adjustments and reversals.
-- Committed same-payload retries return the same receipt before checking a subsequently stale invoice version. A changed request with the same key conflicts. Scope checks precede parent locks, and new commands preserve the invoice-to-business lock order used by existing adjustment/numbering functions.
-- The payment dialog keeps uncertain requests and exact retry keys in account/business/invoice/demo-scoped session storage. A failed storage write blocks submission. Generic transport failures remain uncertain; a later authorization error does not erase an earlier uncertain request.
-- Payment history and snapshot receipt PDFs, with explicit demo labeling and full-reversal annotations. Existing unnamed legacy payments remain identifiable as legacy and do not acquire invented receipt numbers.
-- Generic `/api/records` payment writes are blocked at the application boundary. Database enforcement requires the new migration; existing direct authenticated REST grants remain a legacy boundary until it is applied.
+- A repeatable-read read-only browser SQL audit inspected existing records, functions, triggers, RLS and effective grants. There is no migration ledger; dependencies were checked against actual schema objects. All 88 records were demo data; 70 were documents/payments. One retained payment lacks currency and continues to inherit its linked invoice currency with a review warning. No payment history was normalized or fabricated.
+- Full business/member/record/audit copies are retained in a private, RLS-enabled backup schema. A restore rehearsal copied all 88 records and a bidirectional `EXCEPT ALL` comparison found zero differences. This is an in-database restore rehearsal, not an independent disaster-recovery backup.
+- An isolated schema on the actual PostgreSQL 17.11 project exercised the migration, authenticated owner/viewer/outsider/anonymous roles, exact amounts/dates, immutability, same-key replay, altered requests, stale versions, currency/demo boundaries and full reversal behavior.
+- Two overlapping connections returned one receipt for the same command. A second overlapping pair exercised invoice lock → adjustment numbering → payment, stale retry, distinct receipt, duplicate reversal, altered replay and cancellation rejection. Distinct backend PIDs and overlapping start/finish times are retained. Four events reconciled to three receipts, one reversal and INR 70 net, without a deadlock. Further overlapping pairs proved one correction for simultaneous reversals and five unique receipt numbers for five receipts after distinct concurrent commands.
+- An injected outbox failure rolled back command, sequence, event and projection. The public records still matched the backup.
+- The additive payment migration then applied to `public`. A production smoke transaction created an isolated synthetic demo business/invoice, verified receipt/reversal and permission behavior, and rolled back. Production retains zero newly created payment events and all 88 original records unchanged.
+- Live audit also found excessive default privileges on `billing_shares`. `202610300001_share_grants.sql` removes direct write/TRUNCATE grants while retaining authenticated member-scoped SELECT and checked share commands. Fresh installation SQL has the same restriction.
 
-## Verification retained
+SQL scripts and timestamped results are retained outside the checkout in `../reports/folio-payment-foundation-2026-10-30/`. Private raw audit snapshots are outside source and release archives.
 
-224 automated tests pass, including actual PostgreSQL SQL/PLpgSQL and RLS checks in an in-memory PGlite engine. The payment dependency migrations are executed unchanged in that engine; unrelated sharing/pgcrypto is excluded and Supabase auth/storage scaffolding is modeled locally. PGlite uses one exclusive connection: **these checks do not establish multi-connection lock behavior or hosted Supabase parity**.
+## Application behavior
 
-Browser QA used `node scripts/payment-preview.mjs --lose-first-confirmation` with a disposable SQL database. A synthetic INR 250 payment committed, its first confirmation was intentionally replaced by a 502, the request survived dialog close and reload, and retry returned the single original receipt. The PDF downloaded; a full reversal restored the invoice balance and retained the original receipt. A separate run with `--commands-unavailable` confirmed that history stays readable and entry/reversal controls stay unavailable.
+One command transaction creates the immutable typed event, numbered snapshot receipt, report-compatible record, audit and outbox. Committed exact retries return the original receipt before checking a now-stale invoice version. Direct payment edits/archive are rejected; corrections add a full linked reversal on its own effective date. Invoice financial identity freezes after a receipt. Recording and reversing records do not collect or refund money.
 
-Syntax, TypeScript and the full production build are separate release checks. Physical phone-width QA, live permission checks and actual database concurrency remain outstanding.
+The payment dialog preserves exact uncertain requests in account/business/invoice/demo-scoped session storage, blocks submission when persistence fails and retains uncertainty across later authorization errors. Receipt PDFs use recorded parties and invoice identity, paginate and label demo data. Legacy payments do not acquire invented receipt numbers.
 
-## Production sequence
+## Verification and limits
 
-1. Obtain access to the existing Supabase project `digewoxoqblxlfnekjmc`. Preserve its current audience, business ownership and grants unless a reviewed migration changes them.
-2. Run the read-only `scripts/payment-preflight.mjs` with its private JSON stdin protocol. It inspects migration versions when a ledger exists, functions, triggers, grants/policies and up to 100,000 current document/payment rows in one repeatable-read read-only transaction. More records fail the audit explicitly. The report includes record IDs and issue codes, without contact values or raw snapshots. Credentials stay in memory, never arguments/files/output.
-3. Confirm the nine existing migration dependencies and the effective grants/triggers. Resolve orphan/cross-context/invalid/archived payments, report-invalid parents and paid-without-settlement cases through an explicit reviewed policy; do not synthesize payments, delete history or silently normalize data. Back up and rehearse restore.
-4. Apply only `supabase/migrations/202610290001_payment_commands.sql` to staging. Do not reapply old migrations. Reconcile each demo/real business and currency before and after the additive migration.
-5. On real multi-connection PostgreSQL, test same-key parallel retries, different-payload conflicts, simultaneous distinct payments, simultaneous reversals, payment versus adjustment/duplication/numbering and payment versus invoice edits/cancellation. Check no duplicate event/receipt/audit/outbox, no deadlock, all-or-none rollback, and tenant/viewer/anonymous denial through direct REST as well as the app.
-6. Apply to production only after those gates pass. `billing_payment_readiness` API version 1 enables entry for permitted roles; absence of that function leaves the hosted payment history read-only. Run authenticated, isolated demo smoke checks, dated statement/dashboard reconciliation, receipt download and reversal checks before calling payment recording activated.
+229 automated tests pass. Local browser SQL QA established lost-confirmation recovery, receipt download and reversal reconciliation; unavailable commands preserve readable history. Actual hosted PostgreSQL tests establish the concurrency and role results listed above. They do not replace authenticated end-to-end HTTP/browser QA on the hosted Site: that requires a Folio user session, which was unavailable during this run. Physical phone-width QA remains outstanding.
 
-## Deliberate remaining scope
+Business time-zone support is applied separately in `202610300002_business_time_zone.sql`. Existing businesses retain India as the explicit default; owners can choose an IANA zone. New document/workflow/payment defaults, dashboard balances and report defaults use that business calendar. Explicit report dates and stored document/payment dates are preserved. Midnight/daylight-saving cases, SQL validation and owner-only changes are tested. A synthetic browser fixture in Pacific/Kiritimati showed the next-day receivables and payment defaults and the selected settings value.
 
-This slice is not full R0/R1 completion or a general ledger. Multi-invoice allocation, unapplied-advance allocation, cash refunds, fiscal locks, automatic balanced accounting postings, real outbox dispatch, gateway collection, full currency exponents and Unicode PDF fonts remain separate work. Existing reports still read bounded current records rather than an immutable historical accounting ledger. Receipt sequences are per business/demo mode; broader fiscal numbering policy remains to be specified.
+## Remaining scope
+
+This is not full R0/R1 or Refrens parity. Multi-invoice allocation, advance allocation, cash refunds, fiscal locks, balanced accounting postings, outbox dispatch, gateway collection, full currency exponents and Unicode PDF fonts remain separate work. Reports use bounded current records rather than an immutable historical ledger. Receipt sequences are per business/demo; broader fiscal numbering policy remains open. Email, WhatsApp, payment and tax providers still need their own configured accounts and verification.
+
+For a fresh installation, apply migrations in order. Do not reapply old migrations to this project. In another existing environment, repeat the read-only audit, private backup/restore comparison, isolated role/concurrency tests and reconciliation before activating commands. Absence of readiness API version 1 keeps payment history read-only.

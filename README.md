@@ -24,4 +24,4 @@ Email drafts download without sending. Live delivery requires runtime `RESEND_AP
 
 The existing Sites project identity is retained in `.openai/hosting.json`. Source/public assets are under `public/`, server routes under `app/api/`, and the dashboard uses the framework's React/Recharts client. `dist/` is generated build output and ignored. The existing owner-private audience is preserved.
 
-Payment foundation rollout: [activation status and checks](docs/PAYMENT-ACTIVATION.md). The hosted UI stays read-only for payment history until the verified command migration is available. Local SQL browser QA runs with `node scripts/payment-preview.mjs`; it never connects to production.
+Payment foundation rollout: [activation status and checks](docs/PAYMENT-ACTIVATION.md). Production payment commands are activated after live schema, role, concurrency and rollback checks. Business time zones are configurable in Settings; existing recorded dates are preserved. Local SQL browser QA runs with `node scripts/payment-preview.mjs`; it never connects to production.

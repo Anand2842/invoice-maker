@@ -1,5 +1,5 @@
 import {api} from '/workspace-shell.js';
-import {businessDate} from '/business-date.js';
+import {businessDate,businessTimeZone} from '/business-date.js';
 
 let activeDialog;
 const pendingMemory = new Map();
@@ -47,7 +47,7 @@ async function downloadReceipt(query, number) {
  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(href), 1000);
 }
 
-export async function openPayments({business, invoice, demo = false, onSaved} = {}) {
+export async function openPayments({business, invoice, demo = false, timeZone, onSaved} = {}) {
  if (activeDialog?.isConnected) {activeDialog.focus(); return;}
  const businessId = typeof business === 'string' ? business : business?.id;
  const invoiceId = typeof invoice === 'string' ? invoice : invoice?.id;
@@ -209,7 +209,8 @@ export async function openPayments({business, invoice, demo = false, onSaved} = 
   }
   let amountInput;
   if (!original) amountInput = field('amount', 'Amount (' + response.invoice.data.currency + ')', {required: true, inputMode: 'decimal', pattern: '[0-9]+([.][0-9]{1,2})?', maxLength: 16});
-  field('date', original ? 'Reversal date' : 'Payment date', {required: true, type: 'date', value: businessDate(), min: original?.data?.date});
+  form.append(el('p','Business time zone: '+businessTimeZone(timeZone),'fp-muted'));
+  field('date', original ? 'Reversal date' : 'Payment date', {required: true, type: 'date', value: businessDate(new Date(),timeZone), min: original?.data?.date});
   if (original) field('reason', 'Reason for reversal', {required: true, textarea: true, maxLength: 1000, wide: true});
   else {
    field('method', 'Payment method', {required: true, maxLength: 100});

@@ -85,3 +85,9 @@ See [PARITY-PROGRESS.md](PARITY-PROGRESS.md) for the first receivables/payment-v
 ## 30 October 2026 — payment foundation prepared
 
 Payment history and reversal-aware projections are implemented. Atomic single-invoice receipt/reversal commands, snapshot receipt PDFs and recovery UI have local SQL/browser evidence. Production activation awaits database access, preflight, restore rehearsal and multi-connection tests. See [PAYMENT-ACTIVATION.md](PAYMENT-ACTIVATION.md); earlier unfinished payment entries are historical notes, not an activation claim.
+
+## 30 October 2026 — live activation and business calendars
+
+This entry supersedes earlier pending-access/activation notes. Production schema and records were audited, 88 full records backed up and restore-compared, and the payment migration passed actual multi-connection PostgreSQL tests. Single-invoice receipt/full-reversal commands are now enabled. An isolated production smoke transaction passed and rolled back; all original records remain unchanged. Excessive share-table TRUNCATE/write grants were removed.
+
+Owners can set a business IANA time zone. Dashboard, new document/workflow/payment and report defaults use it; explicit periods and stored dates stay unchanged. 229 automated tests pass. See [PAYMENT-ACTIVATION.md](PAYMENT-ACTIVATION.md) for evidence and remaining authenticated hosted-browser, physical phone, accounting/allocation and provider work. No whole parity release is marked complete.

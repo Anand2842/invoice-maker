@@ -3,7 +3,9 @@
 import {createServer} from 'node:http';import{readFile}from'node:fs/promises';import path from'node:path';import{fileURLToPath}from'node:url';
 import{paymentDatabase}from'../tests/helpers/payment-db.mjs';import{clientStatement}from'../lib/statements.mjs';import{paymentGET,paymentPOST}from'../lib/payment-api.mjs';
 const f=await paymentDatabase(),root=fileURLToPath(new URL('../public/',import.meta.url));
-const business={id:f.business,name:'Folio SQL QA — synthetic data',currency:'INR'};
+const zone=process.argv.find(arg=>arg.startsWith('--time-zone='))?.slice('--time-zone='.length)||'Asia/Kolkata';
+await f.db.query("update public.billing_businesses set name='Folio SQL QA — synthetic data',time_zone=$1 where id=$2",[zone,f.business]);
+const business=(await f.db.query('select * from public.billing_businesses where id=$1',[f.business])).rows[0];
 await f.invoice({number:'QA-INV-001',seller:{name:business.name},buyer:{name:'Northstar Demo Studio'},items:[{name:'Design work',quantity:1,rate:1000}]},true);
 const second=await f.invoice({number:'QA-INV-002',seller:{name:business.name},buyer:{name:'Northstar Demo Studio'},items:[{name:'Development work',quantity:1,rate:2000}]},true);
 await f.record(second,{amount:'750.00'});
@@ -50,11 +52,11 @@ const server=createServer(async(req,res)=>{
    const rows=(await f.as(f.owner,db=>db.query('select * from public.billing_records where business_id=$1 and demo=$2',[business.id,demo]))).rows;
    return respond(res,Response.json({...clientStatement(rows,business,Object.fromEntries(url.searchParams)),demo}));
   }
-  const pathname=url.pathname==='/receivables/'?'/receivables/index.html':url.pathname==='/reports/statements/'?'/reports/statements.html':url.pathname;
+  const pathname=url.pathname==='/receivables/'?'/receivables/index.html':url.pathname==='/reports/statements/'?'/reports/statements.html':url.pathname==='/settings/'?'/settings/index.html':url.pathname;
   const file=path.resolve(root,'.'+decodeURIComponent(pathname));if(!file.startsWith(root))throw Error('Not found');
   const types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.woff2':'font/woff2','.json':'application/json'};
   const content=await readFile(file);res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(content);
  }catch(error){res.writeHead(400,{'Content-Type':'application/json'});res.end(JSON.stringify({error:error.message}))}
 });
-server.listen(5180,'127.0.0.1',()=>console.log('Disposable SQL QA: http://127.0.0.1:5180/receivables/?demo=true&date=2026-10-30'));
+server.listen(5180,'127.0.0.1',()=>console.log('Disposable SQL QA: http://127.0.0.1:5180/receivables/?demo=true'));
 process.on('SIGINT',()=>{server.close();f.close().finally(()=>process.exit(0))});

@@ -12,8 +12,8 @@ create table public.billing_shares (
 );
 alter table public.billing_shares enable row level security;
 create policy billing_shares_read on public.billing_shares for select to authenticated using(public.billing_can_access(business_id,false));
+revoke all on public.billing_shares from public,anon,authenticated;
 grant select on public.billing_shares to authenticated;
-revoke all on public.billing_shares from anon;
 create function public.billing_create_share(source_id uuid, source_version integer, raw_token text, pdf text, file_name text, expires timestamptz, password_text text default '', downloading boolean default true)
 returns uuid language plpgsql security definer set search_path='' as $$
 declare source public.billing_records; new_id uuid;
