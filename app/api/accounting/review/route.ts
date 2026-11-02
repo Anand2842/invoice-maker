@@ -1,0 +1,1 @@
+import{identity,json,sb,uuid,originAllowed,readObject}from'../../../../lib/supabase';import{reviewGET,reviewPOST}from'../../../../lib/accounting-review-api.mjs';const dependencies={identity,json,sb,uuid,originAllowed,readObject};export const GET=(req:Request)=>reviewGET(req,dependencies);export const POST=(req:Request)=>reviewPOST(req,dependencies);

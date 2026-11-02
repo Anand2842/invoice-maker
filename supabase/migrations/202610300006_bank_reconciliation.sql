@@ -48,6 +48,7 @@ create function public.billing_bank_command(business uuid,data_mode boolean,comm
 declare config public.billing_ledger_configs;account public.billing_ledger_accounts;previous public.billing_bank_commands;imported uuid;item jsonb;n integer=0;day date;debit numeric;credit numeric;balance numeric;description text;reference text;v_fingerprint text;v_source_hash text;v_rows_hash text;statement public.billing_bank_lines;entry public.billing_ledger_entries;matched public.billing_bank_matches;result jsonb;action text;
 begin
  if auth.uid() is null or not public.billing_can_access(business,true) then raise exception using errcode='42501',message='You cannot reconcile this business';end if;
+ perform public.billing_ledger_writer_lock(business,false);
  if data_mode is null or command_id is null or jsonb_typeof(command) is distinct from 'object' then raise exception 'Invalid reconciliation command';end if;
  action=command->>'action';
  if action is null or action not in ('import','match','unmatch') or coalesce(command->>'account','')!~'^[a-f0-9A-F]{8}-[a-f0-9A-F]{4}-[a-f0-9A-F]{4}-[a-f0-9A-F]{4}-[a-f0-9A-F]{12}$' then raise exception 'Choose a reconciliation action and asset account';end if;

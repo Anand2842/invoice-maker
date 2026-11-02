@@ -64,3 +64,16 @@ test('ledger cutover requires a finite calendar date',async()=>{
   await assert.rejects(f.as(f.owner,db=>db.query("select billing_ledger_setup($1,false,'-infinity'::date)",[f.business])),/date|finite/i);
  }finally{await f.close()}
 });
+
+
+test('unsupported currency scales cannot configure or freeze a real ledger',async()=>{
+ const f=await paymentDatabase();try{
+  for(const currency of['JPY','KWD','ZZZ']){
+   await f.as(f.owner,db=>db.query('update billing_businesses set currency=$1 where id=$2',[currency,f.business]));
+   await assert.rejects(f.as(f.owner,db=>db.query("select billing_ledger_setup($1,false,'2026-10-01')",[f.business])),/currency is not supported/);
+  }
+  assert.equal((await f.db.query('select count(*)::int n from billing_ledger_configs')).rows[0].n,0);
+  await f.as(f.owner,db=>db.query("update billing_businesses set currency='USD' where id=$1",[f.business]));
+  const result=await f.as(f.owner,db=>db.query("select billing_ledger_setup($1,false,'2026-10-01') result",[f.business]));assert.equal(result.rows[0].result.currency,'USD');
+ }finally{await f.close()}
+});

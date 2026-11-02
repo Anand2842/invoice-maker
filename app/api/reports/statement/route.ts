@@ -1,3 +1,4 @@
+import{cashReportRecords}from'../../../../lib/cash-report-records.mjs';
 import{statementPrintHTML}from'../../../../lib/print-document.mjs';
 import{printResponse}from'../../../../lib/print-response.mjs';
 import{identity,json,sb,uuid}from'../../../../lib/supabase';
@@ -12,6 +13,7 @@ export async function GET(req:Request){
   const options={from,to,client,currency:p.get('currency')||business.currency};clientStatement([],business,options);
   const records:any[]=[];for(let offset=0;offset<=10000;offset+=500){const r=await sb('/rest/v1/billing_records?'+new URLSearchParams({business_id:'eq.'+b,collection:'in.(documents,payments,clients)',demo:'eq.'+(p.get('demo')==='true'),archived:'eq.false',select:'id,collection,data,archived',order:'id.asc',limit:'500',offset:String(offset)}),user.access);if(!r.ok)throw Error('Unable to load statement records');records.push(...r.data);if(records.length>10000)throw Error('Report exceeds 10,000 records. No partial balances are shown.');if(r.data.length<500)break}
   if(client&&!records.some(r=>r.id===client&&r.collection==='clients'))return json({error:'Client not found in the selected business and data mode'},404);
+  records.push(...await cashReportRecords(sb,user.access,b!,p.get('demo')==='true'));
   const report={...clientStatement(records,business,options),demo:p.get('demo')==='true'};
   if(format==='json')return json(report);
   if(format==='print')return printResponse(statementPrintHTML(report));

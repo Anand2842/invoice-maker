@@ -1,0 +1,12 @@
+# Paid-expense posting contract
+
+Implemented in local unpublished source with 345 passing full-suite tests. Migration `202611010005_paid_expenses.sql` remains unapplied to staging/production. Browser, actual PostgreSQL concurrency and accountant verification remain open. See `../../reports/folio-paid-expenses-2026-11-01/REPORT.md`.
+
+- Generic expense CRUD stays non-posting. A reviewed **Post paid expense** command freezes a versioned source snapshot, explicit ledger currency, expense/cash/input-tax accounts and the user's assertion that this expense was paid outside Folio. It never moves funds or invents an AP claim.
+- Lock expense record → business authorization recheck → ledger config. Use an immutable retry command, source/batch link, audit and outbox in one transaction. Match current real/demo/business/currency and existing period/cutover policy.
+- Never backfill missing currency silently. Explicit posting can adopt the chosen ledger base as part of its reviewed snapshot and label that provenance. Foreign/old-date sources need opening/FX review.
+- Gross cash outflow is the source amount. Debit expense and, only when explicitly reviewed/eligible/reconciled source tax fields justify it, input tax; credit the selected cash account. All fields are exact decimal strings at the command boundary. Input-tax totals and reversals must not exceed gross. Reverse-charge cases need a deliberate complete posting rule; do not ignore them.
+- Posted source data/archive are immutable. Full dated reversal retains the source and creates the opposite journal; general GL reversal must not bypass its command. Reversed expense and input-tax history need dated report treatment and explicit GST workpaper review flags; no portal-ready filing claim.
+- Reconciliation derives expected expense/cash/input-tax values from the frozen expense source/reversal independently of GL lines. Opening/manual/unposted differences remain visible. Actual accountant approval is not fabricated by a mock or a passing arithmetic check.
+- Expose review/post/reverse through the expenses directory with persisted exact retry keys, role gates and clear no-funds-movement copy. Employee reimbursements/claims and vendor bills are separate obligations.
+- Required verification: source precision/tax/scope/date/account checks, paid confirmation, exact replay/altered conflict, period lock, source immutability, generic journal bypass, report date boundaries, injected failure rollback, role denial, API and page assets. Actual concurrency/browser gates remain visible if unavailable.

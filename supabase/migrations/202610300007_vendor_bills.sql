@@ -14,6 +14,15 @@ alter table public.billing_vendor_bills enable row level security;
 revoke all on public.billing_vendor_bills from public,anon,authenticated;
 grant select on public.billing_vendor_bills to authenticated;
 create policy vendor_bill_read on public.billing_vendor_bills for select to authenticated using(public.billing_can_access(business_id));
+-- Stable draft command results make lost-confirmation retries safe even after later edits.
+create table public.billing_vendor_bill_commands(
+ business_id uuid not null references public.billing_businesses(id),demo boolean not null,command_id uuid not null,
+ actor_id uuid not null references auth.users(id),request jsonb not null,result jsonb not null,
+ primary key(business_id,demo,command_id)
+);
+alter table public.billing_vendor_bill_commands enable row level security;
+revoke all on public.billing_vendor_bill_commands from public,anon,authenticated;
+create trigger vendor_bill_command_immutable before update or delete on public.billing_vendor_bill_commands for each row execute function public.billing_ledger_immutable();
 create function public.billing_vendor_bill_guard() returns trigger language plpgsql set search_path='' as $$
 begin
  if tg_op='DELETE' or old.status='issued' then raise exception 'Issued vendor bills are immutable; correct the posted journal with a dated reversal';end if;
@@ -22,18 +31,26 @@ begin
 end$$;
 create trigger vendor_bill_guard before update or delete on public.billing_vendor_bills for each row execute function public.billing_vendor_bill_guard();
 
-create function public.billing_vendor_bill_save(business uuid,data_mode boolean,bill_id uuid,expected_version integer,bill_data jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
+create function public.billing_vendor_bill_save(business uuid,data_mode boolean,bill_id uuid,expected_version integer,bill_data jsonb,command_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
 declare existing public.billing_vendor_bills;vendor public.billing_records;config public.billing_ledger_configs;account public.billing_ledger_accounts;
+ previous public.billing_vendor_bill_commands;request jsonb;result jsonb;
  item jsonb;items jsonb='[]';quantity numeric;rate numeric;line_total numeric;base numeric=0;tax numeric;day date;due date;normalized jsonb;
 begin
  if auth.uid() is null or not public.billing_can_access(business,true) then raise exception using errcode='42501',message='You cannot edit vendor bills in this business';end if;
- if data_mode is null or bill_id is null or expected_version is null or expected_version<0 or jsonb_typeof(bill_data) is distinct from 'object' or (bill_data-array['vendorId','number','date','dueDate','currency','items','taxAmount','taxReviewed','accountId','notes'])<>'{}'::jsonb then raise exception 'Invalid vendor bill draft';end if;
- select * into config from public.billing_ledger_configs where business_id=business and demo=data_mode;
+ perform public.billing_ledger_writer_lock(business,false);
+ if data_mode is null or bill_id is null or command_id is null or expected_version is null or expected_version<0 or jsonb_typeof(bill_data) is distinct from 'object' or (bill_data-array['vendorId','number','date','dueDate','currency','items','taxAmount','taxReviewed','accountId','notes'])<>'{}'::jsonb then raise exception 'Invalid vendor bill draft';end if;
+ select * into config from public.billing_ledger_configs where business_id=business and demo=data_mode for update;
  if config.business_id is null then raise exception 'Configure the ledger first; legacy expenses remain separate';end if;
+ request=jsonb_build_object('action','save','bill',bill_id,'version',expected_version,'data',bill_data);
+ select * into previous from public.billing_vendor_bill_commands c where c.business_id=business and c.demo=data_mode and c.command_id=billing_vendor_bill_save.command_id;
+ if previous.command_id is not null then
+  if previous.actor_id<>auth.uid() or previous.request<>request then raise exception using errcode='40001',message='Retry key was used for a different vendor bill command';end if;
+  return previous.result||jsonb_build_object('replayed',true);
+ end if;
  if coalesce(bill_data->>'vendorId','')!~'^[0-9a-fA-F-]{36}$' or coalesce(bill_data->>'accountId','')!~'^[0-9a-fA-F-]{36}$' then raise exception 'Choose a saved vendor and posting account';end if;
  select * into vendor from public.billing_records where id=(bill_data->>'vendorId')::uuid and business_id=business and demo=data_mode and collection='vendors' and not archived for share;
  if vendor.id is null or jsonb_typeof(vendor.data->'name') is distinct from 'string' or length(btrim(vendor.data->>'name')) not between 1 and 1024 then raise exception 'Choose an active saved vendor in this business and data mode';end if;
- select * into account from public.billing_ledger_accounts where id=(bill_data->>'accountId')::uuid and business_id=business and demo=data_mode and type in ('expense','asset');
+ select * into account from public.billing_ledger_accounts where id=(bill_data->>'accountId')::uuid and business_id=business and demo=data_mode and (type='expense' or (type='asset' and code not in ('1000','1100','1300','1400','1450')));
  if account.id is null then raise exception 'Choose an expense or asset account in this business and data mode';end if;
  if bill_data->>'currency' is distinct from config.currency then raise exception 'Vendor bills must use the configured ledger base currency';end if;
  day=public.billing_payment_date(bill_data->'date');due=public.billing_payment_date(bill_data->'dueDate');
@@ -59,13 +76,16 @@ begin
   update public.billing_vendor_bills set vendor_id=vendor.id,data=normalized,version=version+1,updated_at=now() where id=existing.id returning * into existing;
  end if;
  insert into public.billing_ledger_audit(business_id,demo,actor_id,action,details) values(business,data_mode,auth.uid(),'vendor-bill.draft-saved',jsonb_build_object('billId',existing.id,'version',existing.version));
- return jsonb_build_object('bill',to_jsonb(existing));
+ result=jsonb_build_object('bill',to_jsonb(existing),'replayed',false);
+ insert into public.billing_vendor_bill_commands(business_id,demo,command_id,actor_id,request,result) values(business,data_mode,command_id,auth.uid(),request,result);
+ return result;
 end$$;
 
 create function public.billing_vendor_bill_issue(business uuid,data_mode boolean,bill_id uuid,expected_version integer,command_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
 declare bill public.billing_vendor_bills;vendor public.billing_records;previous public.billing_ledger_batches;request jsonb;result jsonb;entries jsonb;payable uuid;tax_account uuid;
 begin
  if auth.uid() is null or not public.billing_can_access(business,true) then raise exception using errcode='42501',message='You cannot issue vendor bills in this business';end if;
+ perform public.billing_ledger_writer_lock(business,false);
  if data_mode is null or bill_id is null or command_id is null or expected_version is null or expected_version<1 then raise exception 'Invalid vendor bill issue command';end if;
  -- Every ledger writer takes this same lock before posting. Retry lookup precedes mutable draft/period checks.
  perform 1 from public.billing_ledger_configs where business_id=business and demo=data_mode for update;if not found then raise exception 'Configure the ledger first; legacy expenses remain separate';end if;
@@ -85,6 +105,10 @@ begin
  if vendor.id is null then raise exception 'Vendor is no longer active; review the draft';end if;
  select id into payable from public.billing_ledger_accounts where business_id=business and demo=data_mode and code='2000' and type='liability';
  select id into tax_account from public.billing_ledger_accounts where business_id=business and demo=data_mode and code='1300' and type='asset';
+ if payable is null or tax_account is null then raise exception 'The accounts payable and tax receivable control accounts are required';end if;
+ if not exists(select 1 from public.billing_ledger_accounts where id=(bill.data->>'accountId')::uuid and business_id=business and demo=data_mode and (type='expense' or (type='asset' and code not in ('1000','1100','1300','1400','1450')))) then raise exception 'Review the bill expense or asset posting account';end if;
+ if exists(select 1 from public.billing_vendor_bills b where b.business_id=business and b.demo=data_mode and b.vendor_id=bill.vendor_id and b.status='issued' and lower(b.data->>'number')=lower(bill.data->>'number') and not exists(select 1 from public.billing_ledger_batches r where r.reverses_id=b.issued_batch)) then raise exception using errcode='23505',message='This vendor reference is already issued; review the existing bill';end if;
+ if exists(select 1 from public.billing_vendor_bills b join public.billing_ledger_batches r on r.reverses_id=b.issued_batch where b.business_id=business and b.demo=data_mode and b.vendor_id=bill.vendor_id and lower(b.data->>'number')=lower(bill.data->>'number') and r.date>(bill.data->>'date')::date) then raise exception 'A replacement vendor reference cannot predate the previous bill reversal';end if;
  entries=jsonb_build_array(jsonb_build_object('account_id',bill.data->>'accountId','debit',bill.data->>'subtotal','credit','0'));
  if (bill.data->>'taxAmount')::numeric>0 then entries=entries||jsonb_build_array(jsonb_build_object('account_id',tax_account,'debit',bill.data->>'taxAmount','credit','0'));end if;
  entries=entries||jsonb_build_array(jsonb_build_object('account_id',payable,'debit','0','credit',bill.data->>'total'));
@@ -101,11 +125,11 @@ begin
  if data_mode is null or as_of is null or not isfinite(as_of) then raise exception 'Choose a valid payables date';end if;
  select * into config from public.billing_ledger_configs where business_id=business and demo=data_mode;
  select coalesce(jsonb_agg(jsonb_build_object('id',id,'name',data->>'name') order by data->>'name',id),'[]'::jsonb) into vendors from (select id,data from public.billing_records where business_id=business and demo=data_mode and collection='vendors' and not archived order by data->>'name',id limit 500)v;
- select coalesce(jsonb_agg(jsonb_build_object('id',id,'code',code,'name',name,'type',type) order by code),'[]'::jsonb) into accounts from public.billing_ledger_accounts where business_id=business and demo=data_mode and type in ('expense','asset');
+ select coalesce(jsonb_agg(jsonb_build_object('id',id,'code',code,'name',name,'type',type) order by code),'[]'::jsonb) into accounts from public.billing_ledger_accounts where business_id=business and demo=data_mode and (type='expense' or (type='asset' and code not in ('1000','1100','1300','1400','1450')));
  select count(*),coalesce(sum((data->>'total')::numeric) filter(where b.status='issued' and (b.data->>'date')::date<=as_of and not exists(select 1 from public.billing_ledger_batches r where r.reverses_id=b.issued_batch and r.date<=as_of)),0),coalesce(sum((data->>'total')::numeric) filter(where b.status='issued' and (b.data->>'date')::date<=as_of and (b.data->>'dueDate')::date<as_of and not exists(select 1 from public.billing_ledger_batches r where r.reverses_id=b.issued_batch and r.date<=as_of)),0) into bill_count,total,overdue from public.billing_vendor_bills b where business_id=business and demo=data_mode;
  select coalesce(jsonb_agg(to_jsonb(b)||jsonb_build_object('balance',case when status='issued' and (data->>'date')::date<=as_of and not exists(select 1 from public.billing_ledger_batches r where r.reverses_id=b.issued_batch and r.date<=as_of) then data->>'total' else '0' end,'reversalDate',(select r.date from public.billing_ledger_batches r where r.reverses_id=b.issued_batch)) order by created_at desc,id desc),'[]'::jsonb) into rows from (select * from public.billing_vendor_bills where business_id=business and demo=data_mode order by created_at desc,id desc limit 500)b;
  return jsonb_build_object('configured',config.business_id is not null,'currency',config.currency,'canWrite',public.billing_can_access(business,true),'asOf',as_of,'bills',rows,'vendors',vendors,'accounts',accounts,'totalDue',total::text,'overdue',overdue::text,'billCount',bill_count,'billsTruncated',bill_count>500,'vendorsTruncated',(select count(*)>500 from public.billing_records where business_id=business and demo=data_mode and collection='vendors' and not archived),'settlementsAvailable',false);
 end$$;
-revoke all on function public.billing_vendor_bill_guard(),public.billing_vendor_bill_save(uuid,boolean,uuid,integer,jsonb),public.billing_vendor_bill_issue(uuid,boolean,uuid,integer,uuid),public.billing_vendor_bills_read(uuid,boolean,date) from public,anon,authenticated;
-grant execute on function public.billing_vendor_bill_save(uuid,boolean,uuid,integer,jsonb),public.billing_vendor_bill_issue(uuid,boolean,uuid,integer,uuid),public.billing_vendor_bills_read(uuid,boolean,date) to authenticated;
+revoke all on function public.billing_vendor_bill_guard(),public.billing_vendor_bill_save(uuid,boolean,uuid,integer,jsonb,uuid),public.billing_vendor_bill_issue(uuid,boolean,uuid,integer,uuid),public.billing_vendor_bills_read(uuid,boolean,date) from public,anon,authenticated;
+grant execute on function public.billing_vendor_bill_save(uuid,boolean,uuid,integer,jsonb,uuid),public.billing_vendor_bill_issue(uuid,boolean,uuid,integer,uuid),public.billing_vendor_bills_read(uuid,boolean,date) to authenticated;
 notify pgrst,'reload schema';

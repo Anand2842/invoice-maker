@@ -1,3 +1,4 @@
+import{cashMinor,cashMoney}from'/cash/model.mjs';
 import{openPrint}from'/print-open.js';
 import {api} from '/workspace-shell.js';
 import {businessDate,businessTimeZone} from '/business-date.js';
@@ -99,7 +100,7 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
  async function load(first = false) {
   setBusy(true); message('Loading payment history…');
   try {
-   const result = await api('/api/payments?' + query());
+   const result = await api('/api/payments?' + query({settlement:'true',date:businessDate(new Date(),timeZone)}));
    if (closed) return;
    response = result;
    if (first || !userId) {
@@ -123,7 +124,18 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
   const current = response.invoice?.data || {};
   heading.textContent = 'Payments · ' + (current.number || 'Invoice');
   intro.textContent = (dataMode ? 'Demo data · ' : '') + 'Recorded payments and corrections for this invoice. Recording a payment does not collect money.';
-  const writable = response.available && response.canWrite && issuedTypes.has(current.type) && ['sent', 'paid'].includes(current.status);
+  const settlement=response.settlement;
+  if(settlement){
+   const summary=el('section',null,'fp-notice');summary.append(el('h3','Dated invoice settlement'),el('p','Through '+settlement.asOf+' · balance '+current.currency+' '+(settlement.balance===null?'Unavailable for this draft/undated legacy state':cashMoney(settlement.balance))+' · direct receipt capacity '+current.currency+' '+cashMoney(settlement.recordableAmount)));
+   summary.append(el('p','Direct receipts, credit/debit notes, cash allocations/releases and customer credit refunds are included once. Unapplied cash stays outside invoice balances. Capacity also protects later recorded settlements; record excess money as an explicit cash advance.','fp-muted'));
+   const cash=el('a','Open cash / advances');cash.href='/cash/?'+new URLSearchParams({business:businessId,demo:String(dataMode),date:settlement.asOf});summary.append(cash);
+   if(settlement.inheritedCurrencyWarnings)summary.append(el('p',settlement.inheritedCurrencyWarnings+' retained payment record(s) have no currency; the linked invoice currency is inherited for review. No record was backfilled.','fp-muted'));
+   if(settlement.snapshotKind==='legacy-current')summary.append(el('p','Legacy-current document view: issue history is not fabricated. Freeze/post its snapshot before automatic ledger workflows.','fp-muted'));
+   if(settlement.paymentsTruncated||settlement.allocationsTruncated||settlement.refundsTruncated)summary.append(el('p','History below shows the latest 1,000 events of each kind. The dated balance/capacity includes every scoped event.','fp-muted'));
+   content.append(summary);
+  }
+  const writable = response.available && response.canWrite && issuedTypes.has(current.type) && ['sent', 'paid'].includes(current.status)&&settlement?.issued===true;
+
   if (!response.available) content.append(el('p', 'Payment recording is not available yet.', 'fp-notice'));
   else if (!response.canWrite) content.append(el('p', 'You can view payment history. Your role cannot record payments or corrections.', 'fp-notice'));
   else if (!writable) content.append(el('p', 'Payment recording is available for issued invoices. Review this invoice’s status first.', 'fp-notice'));
@@ -185,6 +197,8 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
    if (actions.childNodes.length) card.append(actions);
    history.append(card);
   }
+  if(settlement?.allocations?.length){const allocated=el('section',null,'fp-history');allocated.append(el('h3','Cash allocation history'));for(const row of settlement.allocations){const d=row.data,p=el('p',d.date+' · '+(d.kind==='allocate'?'Cash allocated':'Allocation released')+' · '+current.currency+' '+cashMoney(d.amount)+' · '+d.number),a=el('a','Review cash / release');a.href='/cash/?'+new URLSearchParams({business:businessId,demo:String(dataMode),cash:d.cashId,date:settlement.asOf});p.append(' ',a);allocated.append(p)}content.append(allocated)}
+  if(settlement?.refunds?.length){const refunds=el('section',null,'fp-history');refunds.append(el('h3','Customer credit refund history'));for(const r of settlement.refunds)refunds.append(el('p',r.date+' · '+(r.kind==='refund'?'External refund recorded':'Refund record reversed')+' · '+current.currency+' '+cashMoney(r.amount)+' · '+(r.snapshot.reference||r.number)));content.append(refunds)}
   content.append(history);
   if (writable && !pending && !corruptPending) renderForm();
  }
@@ -211,7 +225,7 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
   let amountInput;
   if (!original) amountInput = field('amount', 'Amount (' + response.invoice.data.currency + ')', {required: true, inputMode: 'decimal', pattern: '[0-9]+([.][0-9]{1,2})?', maxLength: 16});
   form.append(el('p','Business time zone: '+businessTimeZone(timeZone),'fp-muted'));
-  field('date', original ? 'Reversal date' : 'Payment date', {required: true, type: 'date', value: businessDate(new Date(),timeZone), min: original?.data?.date});
+  const dateInput=field('date', original ? 'Reversal date' : 'Payment date', {required: true, type: 'date', value: businessDate(new Date(),timeZone), min: original?.data?.date});
   if (original) field('reason', 'Reason for reversal', {required: true, textarea: true, maxLength: 1000, wide: true});
   else {
    field('method', 'Payment method', {required: true, maxLength: 100});
@@ -219,6 +233,10 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
    field('notes', 'Notes (optional)', {textarea: true, maxLength: 5000, wide: true});
   }
   const actions = el('div', null, 'fp-actions'), save = el('button', original ? 'Confirm reversal' : 'Record payment', 'fp-primary'); save.type = 'submit'; actions.append(save);
+  let dateContext=response.settlement,dateRequest=0;const balanceHint=el('p','','fp-muted');
+  function showCapacity(){if(original)return;balanceHint.textContent=dateContext?'Through '+dateContext.asOf+' · invoice balance '+response.invoice.data.currency+' '+(dateContext.balance===null?'unavailable':cashMoney(dateContext.balance))+' · maximum new direct receipt '+cashMoney(dateContext.recordableAmount):'Settlement capacity unavailable. Refresh before recording.';save.disabled=!dateContext||!dateContext.issued||dateContext.canWrite!==true||cashMinor(dateContext.recordableAmount)===0n}
+  if(!original){form.append(balanceHint);showCapacity();dateInput.onchange=async()=>{const request=++dateRequest,day=dateInput.value;dateContext=null;showCapacity();setBusy(true);try{const r=await api('/api/payments?'+query({settlement:'true',date:day}));if(closed||request!==dateRequest)return;if(r.settlement?.asOf!==day)throw Error('Dated settlement confirmation was incomplete');dateContext=r.settlement;showCapacity()}catch(error){if(request===dateRequest){balanceHint.textContent=error.message;save.disabled=true}}finally{if(request===dateRequest)setBusy(false)}}}
+
   if (original) actions.append(button('Cancel reversal', () => {renderForm();}));
   form.append(actions); content.append(form);
   if (original) {form.scrollIntoView({block: 'nearest'}); form.querySelector('input,textarea')?.focus();}
@@ -227,6 +245,7 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
    if (amountInput && (!/^\d+(\.\d{1,2})?$/.test(amountInput.value) || Number(amountInput.value) <= 0 || Number(amountInput.value) > 1e10)) {
     amountInput.setCustomValidity('Enter a positive amount with up to two decimal places.'); amountInput.reportValidity(); return;
    }
+   if(amountInput&&(!dateContext||dateContext.asOf!==dateInput.value||cashMinor(amountInput.value)>cashMinor(dateContext.recordableAmount))){amountInput.setCustomValidity('This amount exceeds the direct receipt capacity at the chosen date. Review cash / advances for unapplied money.');amountInput.reportValidity();return;}
    const values = new FormData(form);
    const command = original
     ? {action: 'reverse', business: businessId, payment: original.id, demo: dataMode, date: values.get('date'), reason: String(values.get('reason')).trim()}

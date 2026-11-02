@@ -1,0 +1,1 @@
+import{identity,json,sb,uuid,originAllowed,readObject}from'../../../lib/supabase';import{mockRefundGET,mockRefundPOST}from'../../../lib/mock-refund-api.mjs';const dependencies={identity,json,sb,uuid,originAllowed,readObject};export const GET=(req:Request)=>mockRefundGET(req,dependencies);export const POST=(req:Request)=>mockRefundPOST(req,dependencies);

@@ -1,3 +1,13 @@
+-- Lock membership changes before ledger/config locks, then recheck the current role.
+-- NO KEY UPDATE remains compatible with FK KEY SHARE. Payment invoice/business lock order is unchanged.
+create or replace function public.billing_ledger_writer_lock(business uuid,owner_only boolean default false) returns void language plpgsql security definer set search_path='' as $$
+begin
+ if auth.uid() is null or not public.billing_can_access(business,true) or (owner_only and not public.billing_is_owner(business)) then raise exception using errcode='42501',message='Your role cannot write to this business ledger';end if;
+ perform 1 from public.billing_businesses where id=business for no key update;
+ if not public.billing_can_access(business,true) or (owner_only and not public.billing_is_owner(business)) then raise exception using errcode='42501',message='Your role no longer permits this ledger action';end if;
+end$$;
+revoke all on function public.billing_ledger_writer_lock(uuid,boolean) from public,anon,authenticated;
+
 -- Read-only, keyset-paginated account ledger. Balances include every preceding entry,
 -- not merely rows on the current page. Posted originals and reversals stay separate.
 create function public.billing_ledger_lines(

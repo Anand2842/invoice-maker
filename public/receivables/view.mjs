@@ -1,5 +1,5 @@
 // Pure view selectors: filtering never changes the financial summary totals.
-export const settlementLabels={unpaid:'Unpaid',partial:'Partially paid',settled:'Settled',credit:'Credit balance'};
+export const settlementLabels={unpaid:'Unpaid',partial:'Partially paid',settled:'Settled',credit:'Credit balance',cancelled:'Cancelled'};
 export function visibleInvoices(rows,{search='',state='all'}={}) {
  const term=search.trim().toLowerCase();
  return rows.filter(row=>{

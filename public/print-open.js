@@ -1,7 +1,7 @@
 import {api} from '/workspace-shell.js';
 export async function openPrint(path){
  const url=new URL(path,location.origin);
- if(url.origin!==location.origin||!['/api/payments','/api/reports/statement'].includes(url.pathname)||url.searchParams.get('format')!=='print')throw Error('Choose a supported document to print.');
+ if(url.origin!==location.origin||!['/api/payments','/api/cash','/api/credits','/api/reports/cash-statement','/api/accounting/review','/api/reports/statement','/api/reports/vendor-statement'].includes(url.pathname)||url.searchParams.get('format')!=='print')throw Error('Choose a supported document to print.');
  const popup=window.open('about:blank','_blank');if(!popup)throw Error('Allow a new tab to open the print view.');popup.opener=null;
  try{
   let response=await fetch(url,{headers:{Accept:'text/html'}});
