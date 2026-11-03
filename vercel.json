@@ -1,6 +1,4 @@
 {
   "framework": null,
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist/client",
-  "cleanUrls": true
+  "buildCommand": "node scripts/build-vercel.mjs"
 }
