@@ -1,0 +1,1 @@
+import{identity,json,sb,uuid,originAllowed,readObject}from'../../../lib/supabase';import{inventoryGET,inventoryPOST}from'../../../lib/inventory-api.mjs';const dependencies={identity,json,sb,uuid,originAllowed,readObject};export const GET=(req:Request)=>inventoryGET(req,dependencies);export const POST=(req:Request)=>inventoryPOST(req,dependencies);

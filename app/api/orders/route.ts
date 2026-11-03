@@ -1,0 +1,1 @@
+import{identity,json,sb,originAllowed,readObject}from'../../../lib/supabase';import{ordersGET,ordersPOST}from'../../../lib/sales-orders-api.mjs';const dependencies={identity,json,sb,originAllowed,readObject};export const GET=(req:Request)=>ordersGET(req,dependencies);export const POST=(req:Request)=>ordersPOST(req,dependencies);

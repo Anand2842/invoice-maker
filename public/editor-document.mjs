@@ -6,7 +6,7 @@ export const EDITOR_DOCUMENT_SCHEMA = 'folio.editor-document';
 export const EDITOR_DOCUMENT_VERSION = 1;
 const types = new Set(['invoice','gst-invoice','quotation','proforma','purchase-order','delivery-challan','commercial-invoice','credit-note','debit-note']);
 const templates = new Set(['classic','modern','minimal','elegant','compact']);
-const documentKeys = new Set(['type','template','brandColor','bank','clientId','number','date','dueDate','currency','roundOff','originalDocumentId','originalDocumentNumber','originalDocumentDate','adjustmentReason','seller','buyer','taxType','gstMode','items','notes','terms','customFields','transport','shipping','gstReporting','taxDetails','attachments','signature','logo','status']);
+const documentKeys = new Set(['sourceRecord','crmCanonicalLeadId','crmLeadVersion','crmPipelineId','orderConversion','sourceOrderId','sourceOrderNumber','sourceQuotationId','crmLeadId','crmQuoteId','type','template','brandColor','bank','clientId','number','date','dueDate','currency','roundOff','originalDocumentId','originalDocumentNumber','originalDocumentDate','adjustmentReason','seller','buyer','taxType','gstMode','items','notes','terms','customFields','transport','shipping','gstReporting','taxDetails','attachments','signature','logo','status']);
 const fail = () => { throw Error('This document draft format could not be read. It has been preserved on this device.'); };
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype,null].includes(Object.getPrototypeOf(value));
 function jsonCopy(value, depth=0) {
@@ -27,7 +27,7 @@ function validate(value) {
   if(value.taxType!==undefined&&!['GST','VAT','NONE'].includes(value.taxType))fail();
   if(value.gstMode!==undefined&&!['split','igst'].includes(value.gstMode))fail();
   if(value.roundOff!==undefined&&typeof value.roundOff!=='boolean')fail();
-  for(const key of ['transport','shipping','taxDetails','bank','gstReporting'])if(value[key]!==undefined&&value[key]!==null&&!object(value[key]))fail();
+  for(const key of ['transport','shipping','taxDetails','bank','gstReporting','orderConversion'])if(value[key]!==undefined&&value[key]!==null&&!object(value[key]))fail();
   for(const key of ['customFields','attachments'])if(value[key]!==undefined&&!Array.isArray(value[key]))fail();
   for(const party of [value.seller,value.buyer])for(const key of ['name','street','city','gstState','pincode','country','address','email','phone','gstin','panNumber'])if(party[key]!==undefined&&party[key]!==null&&typeof party[key]!=='string')fail();
   const customFields=fields=>{if(fields===undefined)return;if(!Array.isArray(fields))fail();for(const field of fields)if(!object(field)||typeof field.label!=='string'||typeof field.value!=='string')fail();};

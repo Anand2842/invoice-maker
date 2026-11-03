@@ -1,4 +1,5 @@
 import { templateStyle, templates as pdfTemplates } from './pdf-templates/index.js';
+import { sourceAllocation, validateOrderConversion } from './source-allocation.mjs';
 /**
  * Dependency-free, local PDF export. Import this module once before calling
  * window.RefrensDocumentExport.{build,download,preview}(document).
@@ -136,6 +137,7 @@ function normalize(input) {
   const gstMode = input.gstMode || 'split';
   if (!['split', 'igst'].includes(gstMode)) throw new RangeError('GST mode must be split or igst.');
   if (!Array.isArray(input.items) || !input.items.length || input.items.length > 1000) throw new RangeError('Add between 1 and 1,000 document items.');
+  if(input.orderConversion!=null)validateOrderConversion(input.orderConversion,type);
   const groups = new Map();
   const minor = { subtotal: 0, discount: 0, taxable: 0, cgst: 0, sgst: 0, igst: 0, vat: 0, cess: 0, tax: 0, shipping: 0, roundOff: 0, preRoundTotal: 0, total: 0 };
   let quantityTotal = 0;
@@ -145,27 +147,30 @@ function normalize(input) {
     const quantity = decimal(item.quantity, `${label} quantity`, 1, 1e9);
     if (quantity.numerator === 0n) throw new RangeError(`${label} quantity must be greater than zero.`);
     const rate = decimal(item.rate, `${label} rate`);
-    const subtotal = safeMinor(rounded(quantity.numerator * rate.numerator * 100n, quantity.denominator * rate.denominator), `${label} amount`);
+    let subtotal = safeMinor(rounded(quantity.numerator * rate.numerator * 100n, quantity.denominator * rate.denominator), `${label} amount`);
     const rawDiscount = decimal(item.discount, `${label} discount`);
     const discountType = String(item.discountType || 'fixed').toLowerCase();
     if (!['fixed', 'amount', 'percent', 'percentage', '%'].includes(discountType)) throw new RangeError(`${label} discount type must be fixed or percent.`);
     const isPercent = ['percent', 'percentage', '%'].includes(discountType);
     if (isPercent && rawDiscount.numeric > 100) throw new RangeError(`${label} percentage discount cannot exceed 100.`);
-    const discount = isPercent
+    let discount = isPercent
       ? safeMinor(rounded(BigInt(subtotal) * rawDiscount.numerator, rawDiscount.denominator * 100n))
       : safeMinor(rounded(rawDiscount.numerator * 100n, rawDiscount.denominator));
+    const allocated = sourceAllocation(item,input.orderConversion,type,taxType,gstMode);
+    if(allocated){subtotal=allocated.subtotal;discount=allocated.discount;}
     if (discount > subtotal) throw new RangeError(`${label} discount cannot exceed its line amount.`);
     const taxable = subtotal - discount;
     const ratePercent = decimal(item.taxRate, `${label} tax rate`, 0, 100);
     const taxApplies = taxType !== 'NONE' && type !== 'delivery-challan';
-    const tax = taxApplies ? safeMinor(rounded(BigInt(taxable) * ratePercent.numerator, ratePercent.denominator * 100n)) : 0;
-    const cgst = taxType === 'GST' && gstMode === 'split' ? Math.floor(tax / 2) : 0;
-    const sgst = taxType === 'GST' && gstMode === 'split' ? tax - cgst : 0;
-    const igst = taxType === 'GST' && gstMode === 'igst' ? tax : 0;
-    const vat = taxType === 'VAT' ? tax : 0;
+    let tax = taxApplies ? safeMinor(rounded(BigInt(taxable) * ratePercent.numerator, ratePercent.denominator * 100n)) : 0;
+    let cgst = taxType === 'GST' && gstMode === 'split' ? Math.floor(tax / 2) : 0;
+    let sgst = taxType === 'GST' && gstMode === 'split' ? tax - cgst : 0;
+    let igst = taxType === 'GST' && gstMode === 'igst' ? tax : 0;
+    let vat = taxType === 'VAT' ? tax : 0;
     const cessRate = decimal(item.cessRate, `${label} cess rate`, 0, 1000);
     if (cessRate.numeric && (taxType !== 'GST' || type === 'delivery-challan')) throw new RangeError('Percentage cess requires a GST document.');
-    const cess = safeMinor(rounded(BigInt(taxable) * cessRate.numerator, cessRate.denominator * 100n));
+    let cess = safeMinor(rounded(BigInt(taxable) * cessRate.numerator, cessRate.denominator * 100n));
+    if(allocated)({tax,cgst,sgst,igst,vat,cess}=allocated);
     const total = safeMinor(BigInt(taxable) + BigInt(tax) + BigInt(cess), `${label} total`);
     for (const [key, amount] of Object.entries({ subtotal, discount, taxable, tax, cgst, sgst, igst, vat, cess })) minor[key] = safeMinor(BigInt(minor[key]) + BigInt(amount));
     quantityTotal += quantity.numeric;
@@ -178,7 +183,7 @@ function normalize(input) {
     return {
       name: textValue(item.name, `${label} name`) || textValue(item.description, `${label} description`) || label,
       description: item.name ? textValue(item.description, `${label} description`) : '',
-      customFields: item.customFields,
+      customFields: item.customFields, sourceAllocation: item.sourceAllocation,
       hsn: textValue(item.hsn, `${label} HSN`), quantity: quantity.raw,
       rateMinor: safeMinor(rounded(rate.numerator * 100n, rate.denominator)),
       discountLabel: isPercent ? `${rawDiscount.numeric}%` : null,
@@ -213,7 +218,7 @@ function normalize(input) {
     seller: party(input.seller, 'Seller'), buyer: party(input.buyer, 'Buyer'),
     notes: textValue(input.notes, 'Notes'), terms: textValue(input.terms, 'Terms'),
     shipping: input.shipping, transport: input.transport, customFields: input.customFields, taxDetails: input.taxDetails,
-    signature: input.signature, logo: input.logo, bank: input.bank, template: input.template || 'classic', brandColor: input.brandColor || '#6040a0', embedImages: input.embedImages === true,
+    orderConversion:input.orderConversion, signature: input.signature, logo: input.logo, bank: input.bank, template: input.template || 'classic', brandColor: input.brandColor || '#6040a0', embedImages: input.embedImages === true,
   };
   templateStyle(document.template, document.brandColor);
   if (document.number.length > 200) throw new RangeError('Document number is too long (maximum 200 characters).');
@@ -432,6 +437,7 @@ function renderItems(layout, doc) {
     if (!delivery && doc.taxType !== 'NONE') meta.push(`${doc.taxType}: ${item.taxRate}%`);
     if (!delivery && item.cessRate) meta.push(`Cess: ${item.cessRate}%`);
     if (meta.filter(Boolean).length) description.push(...wrap(meta.filter(Boolean).join(' | '), descriptionWidth, 8).map(line => ({ line, size: 8, color: '0.43 0.45 0.51' })));
+    if(item.sourceAllocation&&!delivery)description.push(...wrap('Reviewed source allocation: cumulative component rounding; final quantity receives the remaining cents. Review tax components before filing.',descriptionWidth,8).map(line=>({line,size:8,color:'0.43 0.45 0.51'})));
     const quantity = wrap(item.quantity, delivery ? 105 : 40, 9);
     const rate = delivery ? [] : wrap(money(item.rateMinor, doc.currency), 92, 9);
     // Amount is before tax; the tax summary below reconciles to the grand total.

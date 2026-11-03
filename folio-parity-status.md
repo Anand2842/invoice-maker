@@ -1,6 +1,6 @@
 # Folio web parity — delivery status
 
-As of 1 November 2026, Asia/Kolkata. Full scope remains the [master plan](../reports/folio-parity-plan-2026-10-29/MASTER-PLAN.md): **93 capability groups,56 packages; only native iOS/Android are excluded. Full parity and releases R0/R1/R2 are not complete.**
+As of 2 November 2026, Asia/Kolkata. Full scope remains the [master plan](../reports/folio-parity-plan-2026-10-29/MASTER-PLAN.md): **93 capability groups,56 packages; only native iOS/Android are excluded. Full parity and releases R0/R1/R2 are not complete.**
 
 ## Last confirmed live
 
@@ -12,7 +12,7 @@ No production records were changed. The88-record preservation proof belongs to v
 
 ## Unpublished source
 
-HEAD remains `5e121352a4443576af0aabca7db270def1a9a41d`; all continuation work remains uncommitted/unpublished. Original staged banking index content is preserved exactly. Passing local tests and route existence do not prove hosted activation.
+A separate local process committed the previous financial-workflow checkpoint as `33ad13ad8d9f267a185e6c8688c2a2716839dda9`. This is not a deployment. The original staged banking files are included in that commit; this continuation did not reset, discard or restage them. New 2 November work remains uncommitted and unpublished. Additional local Vercel/static entry files are preserved separately and have not been verified as a functioning server/API deployment. Passing local tests and route existence do not prove hosted activation.
 
 | Area | Local implementation | Remaining scope/gates |
 | --- | --- | --- |
@@ -27,17 +27,18 @@ HEAD remains `5e121352a4443576af0aabca7db270def1a9a41d`; all continuation work r
 | Team/permissions | Owner-managed hashed verified-email invitations and role/revoke/remove, writer authorization recheck and private helpers | Actual waiting-writer/revocation races, provider delivery and outside-owner hosted access remain unverified. |
 | Banking | Reviewed CSV mapping/import, immutable typed lines, exact match/unmatch and persistent retry | Manual only; feeds/splits/automatic cash reconciliation/concurrency/browser proof remain. |
 | Client/editor/print | Client overview, canonical draft values with retained HTML, Unicode browser-print paths | Complete editor migration/accessibility/reload/resize/phone/PDF stress remains. Downloadable server PDFs still have Latin/WinAnsi limits. |
-| Inventory | Scratch source preserved at `docs/drafts/inventory-commands.sql.draft`, outside migration scanner | **Not installed or verified. No working inventory migration/API/UI/tests delivered.** Complete movements/costing/warehouses/tracking/fulfillment/recost remains required. |
+| Inventory / orders / CRM | Parallel implementation resumed on 2 November: typed inventory FIFO/tracking/reservations, partial order conversions and scoped CRM are being completed and independently reviewed. The earlier scratch remains preserved. | Work in progress, not a completed package or installed database. Final combined tests, source caps/permissions/snapshots, browser, recost, fulfillment and migration gates remain. |
+| Source document precision | Unicode saving is decoupled from Latin PDF encoding; exact six-place quantities survive source validation. Reviewed partial conversions use matching JS/SQL cumulative component rounding and final residuals; editor source links are retained and financial fields frozen. | Converted-source authority and full order/inventory integration are still under development. GST component rounding remains explicitly flagged for filing review; server Unicode exports are incomplete. |
 
 ## Current verification
 
-Latest combined checkpoint: **395 tests passed, zero failures/skips; syntax, TypeScript, production build and git diff check passed.** See [parallel financial workflow evidence](../reports/folio-parallel-financial-workflows-2026-11-01/REPORT.md), [cash workspace evidence](../reports/folio-cash-workspace-2026-11-01/REPORT.md) and earlier reports linked there.
+Latest completed combined checkpoint (1 November): **395 tests passed, zero failures/skips; syntax, TypeScript, production build and git diff check passed.** See [parallel financial workflow evidence](../reports/folio-parallel-financial-workflows-2026-11-01/REPORT.md), [cash workspace evidence](../reports/folio-cash-workspace-2026-11-01/REPORT.md) and earlier reports linked there.
 
-The user explicitly requested multiple agents. Customer refund, mock dispatch and scoped-statement work were developed in parallel. The agents later hit usage limits and stopped. Root independently reviewed/integrated their completed work, finished review API/UI/tests and preserved the unfinished inventory source as a draft. Neither partial files nor historical test counts establish completion.
+The user explicitly requested multiple agents. Customer refund, mock dispatch and scoped-statement work were developed in parallel. The agents hit usage limits at the earlier checkpoint; root integrated their financial work. On 2 November the three agents resumed inventory, sales orders and CRM. Root is integrating exact source money/editor behavior and independently reviewing permissions, FIFO stock views and dated search snapshots. The current additions have targeted tests; the new combined checkpoint is pending. Neither partial files nor historical test counts establish completion.
 
 The synthetic preview still cannot bind `127.0.0.1:5180` (`listen EPERM`). Browser/mobile-web/accessibility/print shaping remain unverified. No actual PostgreSQL server/privileged reusable connection is available for overlapping-connection proof. Site source synchronization previously failed DNS for `git.chatgpt-team.site`; no publication attempt followed. The user's choice to continue without repeating authenticated hosted Folio sign-in requests is retained.
 
-All expanded source migrations remain **unapplied to production**. Accounting/team0003–0004 remain isolated staging-only per the [handoff](../CODEX-CLI-HANDOFF-2026-10-31.md). Later0005–0009 and November0001–0012/0014/0015 are not applied to staging or production in this flow. Inventory0013 remains absent while its source is a draft. Inspect actual definitions/grants, back up/rehearse/reconcile records and verify actual races before activation; do not blindly reapply existing objects.
+All expanded source migrations remain **unapplied to production**. Accounting/team0003–0004 remain isolated staging-only per the [handoff](../CODEX-CLI-HANDOFF-2026-10-31.md). Later0005–0009 and November0001–0012/0014/0015 are not applied to staging or production in this flow. Inventory0013 and 2 November order/CRM/allocation-money migrations are local work in progress and have not been applied to any retained database. Inspect actual definitions/grants, back up/rehearse/reconcile records and verify actual races before activation; do not blindly reapply existing objects.
 
 ## Whole-plan work still required
 

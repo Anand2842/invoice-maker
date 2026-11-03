@@ -1,0 +1,1 @@
+import{identity,json,sb,originAllowed,readObject}from'../../../lib/supabase';import{crmGET,crmPOST}from'../../../lib/crm-api.mjs';const deps={identity,json,sb,originAllowed,readObject};export const GET=(req:Request)=>crmGET(req,deps);export const POST=(req:Request)=>crmPOST(req,deps);

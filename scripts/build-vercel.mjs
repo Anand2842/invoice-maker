@@ -141,6 +141,12 @@ const config = {
     {
       handle: "filesystem",
     },
+    // Dynamic pages (dashboard, recovery and protected recipient routes) also
+    // require the server after the static lookup, not a static 404 fallback.
+    {
+      src: "^/.*$",
+      dest: "/api",
+    },
     {
       handle: "error",
     },
