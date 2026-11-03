@@ -88,7 +88,20 @@ export default async function handler(req, res) {
 
     res.statusCode = response.status;
     for (const [key, value] of response.headers.entries()) {
-      res.setHeader(key, value);
+      if (key.toLowerCase() !== "set-cookie") {
+        res.setHeader(key, value);
+      }
+    }
+    if (typeof response.headers.getSetCookie === "function") {
+      const cookies = response.headers.getSetCookie();
+      if (cookies && cookies.length > 0) {
+        res.setHeader("Set-Cookie", cookies);
+      }
+    } else {
+      const setCookie = response.headers.get("set-cookie");
+      if (setCookie) {
+        res.setHeader("Set-Cookie", setCookie);
+      }
     }
 
     const arrayBuffer = await response.arrayBuffer();
@@ -141,3 +154,4 @@ const config = {
 
 writeFileSync(resolve(outputDir, "config.json"), JSON.stringify(config, null, 2));
 console.log("==> Vercel build complete in .vercel/output");
+
