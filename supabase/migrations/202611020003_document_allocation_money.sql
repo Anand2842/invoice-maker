@@ -40,7 +40,7 @@ begin
   source_value=(s->'sourceTotals'->>k)::numeric;prior=(s->'allocatedBefore'->>k)::numeric;component=(s->'components'->>k)::numeric;
   if prior>source_value then raise exception 'Source allocation exceeds frozen source amount'; end if;
   remaining=source_value-prior;
-  expected=case when after_q=source_q then remaining else greatest(0,least(remaining,round(source_value*after_q/source_q)-prior)) end;
+  expected=case when after_q=source_q then remaining else greatest(0,least(remaining,div(source_value*after_q*2+source_q,source_q*2)-prior)) end;
   if component<>expected then raise exception 'Source allocation does not match cumulative rounding policy'; end if;
   parts=parts||jsonb_build_object(k,component);
  end loop;

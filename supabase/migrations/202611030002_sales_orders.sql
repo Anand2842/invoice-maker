@@ -276,7 +276,7 @@ begin
    prior=greatest(prior,coalesce((select sum((m.components->>key)::numeric*m.sign) from public.billing_sales_invoice_components(source.id)m where m.date<=target_date),0));
   end if;
   full_value=(totals->>key)::numeric;if prior<0 or prior>full_value then raise exception 'Existing source allocation components need review before conversion';end if;
-  value=case when after_qty=source_qty then full_value-prior else greatest(0,least(full_value-prior,round(full_value*after_qty/source_qty)-prior)) end;
+  value=case when after_qty=source_qty then full_value-prior else greatest(0,least(full_value-prior,div(full_value*after_qty*2+source_qty,source_qty*2)-prior)) end;
   allocated=allocated||jsonb_build_object(key,prior::text);parts=parts||jsonb_build_object(key,value::text);
  end loop;
  return jsonb_build_object('version',1,'policy','cumulative-proportion-final-residual','sourceLineId',source_id,'conversionLineId',conversion_line,'sourceQuantity',source_qty::numeric(24,6)::text,'quantityBefore',before_qty::numeric(24,6)::text,'quantityAfter',after_qty::numeric(24,6)::text,'sourceTotals',totals,'allocatedBefore',allocated,'components',parts,'reviewed',true,'allocationBasis','max-effective-prefix-from-target-date');
