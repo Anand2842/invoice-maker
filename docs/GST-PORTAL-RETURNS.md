@@ -1,0 +1,11 @@
+# GST portal returns and GSTR-2B review
+
+Choose a business and a complete monthly period on GST reports to download GSTR-1 or GSTR-3B JSON. The JSON is prepared locally from the selected business and data mode; it is not transmitted or filed. Review every listed issue and validate the file against the current portal offline tool before use. Existing workpaper exports remain available separately. Return classifications, tax rates, HSN/UQC, document numbers, GSTINs, notes and source amounts require review. Demo records are included only when demo mode is selected.
+
+GSTR-1 uses the issued document workpaper, including signed adjustments and rate/HSN summaries. Export and special-supply details that cannot be established from source data are flagged for review. GSTR-3B describes reviewed input credit as per books for reconciliation with GSTR-2B; it does not establish legal eligibility or payment. Vendor bills currently store a reviewed aggregate tax amount, not a head-by-head split or an explicit ITC eligibility decision. Such amounts cannot safely be assigned to individual tax heads automatically and need review.
+
+In GSTR-2B reconciliation, select the same business, period and mode, then upload the portal JSON (maximum 4 MB). The import is a retained snapshot identified by a SHA-256 digest. Reconciliation compares supplier GSTIN, normalized invoice number and date, then taxable value and tax heads to a one-rupee tolerance. Review the statuses and record accept, follow-up or ignore decisions. Decisions are retained as history; they do not amend a bill, post a journal, change ITC eligibility or contact a supplier. JSON and CSV exports are review artifacts.
+
+The import reads only the supported `data.docdata.b2b` and `cdnr` structures. Compare import and books totals and investigate missing, ambiguous or unsupported data before relying on the result. GST portal rules and schemas can change; this feature performs no registration lookup, portal validation, submission or filing.
+
+GSTN's [Returns Offline Tool guide](https://tutorial.gst.gov.in/downloads/invoiceuploadofflineutility.pdf) explains portal-side validation and error files. Its [GSTR-2B FAQ](https://tutorial.gst.gov.in/userguide/returns/FAQ_gstr2b.htm) describes the statement and ITC reporting; the supported import here is a subset of the statement.
