@@ -16,7 +16,7 @@ Migrations are in `supabase/migrations/`. The project-specific URL and publishab
 
 ## Documents and delivery
 
-Five PDF templates support PNG/JPEG logos and signatures. PDF fonts currently support Latin/WinAnsi; unsupported characters produce an explicit validation error. Shares are frozen snapshots. Their tokens are only returned at creation and their access is separate from business membership. The deployed Site remains owner-private, so outside-recipient use is blocked by hosting even with a valid document token.
+Five PDF templates support PNG/JPEG logos and signatures. Generated document PDFs support WinAnsi text and additional Latin, Greek and Cyrillic characters covered by embedded Noto Sans; scripts needing complex shaping and characters absent from the font require Print / Save as PDF. Shares are frozen snapshots. Their tokens are only returned at creation and their access is separate from business membership. The deployed Site remains owner-private, so outside-recipient use is blocked by hosting even with a valid document token.
 
 Email drafts download without sending. Live delivery requires runtime `RESEND_API_KEY` and `BILLING_EMAIL_FROM` for a verified sender. No credentials belong in source or public assets. The send action is disabled while the provider is absent. WhatsApp delivery and provider delivery confirmation are not verified.
 
