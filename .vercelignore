@@ -1,0 +1,8 @@
+# Local-only artifacts: never upload to Vercel. The build regenerates dist/ and .vercel/output.
+.worktrees
+.wrangler
+.next
+dist
+.claude
+.env*
+tsconfig.tsbuildinfo
