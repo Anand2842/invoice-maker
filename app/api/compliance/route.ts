@@ -1,0 +1,1 @@
+import{identity,json,sb,originAllowed,readObject}from'../../../lib/supabase';import{complianceGET,compliancePOST}from'../../../lib/compliance-api.mjs';const deps={identity,json,sb,originAllowed,readObject};export const GET=(req:Request)=>complianceGET(req,deps);export const POST=(req:Request)=>compliancePOST(req,deps);
