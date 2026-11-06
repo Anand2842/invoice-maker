@@ -37,7 +37,7 @@ test('payment SQL migrations, commands and database boundary',async t=>{
   for(const amount of ['0','-1','1.001','2e3','10000000000.01',null,true])await assert.rejects(()=>record(source,{amount}));
   for(const patch of [{date:'2026-02-30'},{method:''},{method:{}},{seller:{name:'Forged'}},{number:'FORGED'},{currency:'USD'},{reference:null},{notes:[]},{direction:'outgoing'}])await assert.rejects(()=>record(source,patch));
   assert.equal(await count('billing_payment_events'),before);
-  const large=await record(source,{amount:'10000000000.00'});assert.equal(large.record.data.amount,'10000000000.00');
+  const large=await record(await invoice({items:[{name:'Work',quantity:1,rate:10000000000}]}),{amount:'10000000000.00'});assert.equal(large.record.data.amount,'10000000000.00');
  });
  await t.test('draft, cancelled, quote, wrong mode and wrong business parents reject',async()=>{
   for(const patch of [{status:'draft'},{status:'cancelled'},{type:'quotation'}])await assert.rejects(async()=>record(await invoice(patch)),/issued invoice/);
