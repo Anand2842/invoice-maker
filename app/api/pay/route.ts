@@ -1,0 +1,1 @@
+import{json,sb,originAllowed,readObject}from'../../../lib/supabase';import{payPOST}from'../../../lib/automation-api.mjs';export const POST=(req:Request)=>payPOST(req,{json,sb,originAllowed,readObject});

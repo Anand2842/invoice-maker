@@ -40,12 +40,14 @@ export async function freshDatabase(name){const admin=connect();await admin.unsa
 export async function apply(sql,files){const timings=[];for(const file of files){const started=Date.now();try{await sql.begin(tx=>tx.unsafe(readFileSyncCache.get(file)))}catch(e){throw Error(`${file} failed: ${e.message}`)}timings.push([file,Date.now()-started])}return timings;}
 const readFileSyncCache=new Map();for(const f of migrations)readFileSyncCache.set(f,await readFile(new URL(f,dir),'utf8'));
 
-// Structural security audit against the real catalog. billing_open_share is the one intended anonymous entry point (share links).
+// Structural security audit against the real catalog. Intended anonymous entry points, each gated inside SQL by a share
+// token, the automation secret, a payment-link token or the webhook HMAC. Any other anon-executable definer is a finding.
+export const ANON_ENTRY_POINTS=['billing_open_share','billing_automation_due','billing_automation_generate','billing_email_claim','billing_email_complete','billing_payment_link_open','billing_gateway_mock_capture','billing_gateway_webhook'];
 export async function audit(sql){
  const problems=[];
  for(const r of await sql`select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity`)problems.push(`table without RLS: ${r.relname}`);
  for(const r of await sql`select p.oid::regprocedure::text fn from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef and not exists(select 1 from unnest(coalesce(p.proconfig,'{}')) c where c like 'search_path=%')`)problems.push(`definer without search_path: ${r.fn}`);
- for(const r of await sql`select p.oid::regprocedure::text fn from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef and p.prorettype<>'trigger'::regtype and p.proname<>'billing_open_share' and has_function_privilege('anon',p.oid,'execute')`)problems.push(`definer executable by anon: ${r.fn}`);
+ for(const r of await sql`select p.oid::regprocedure::text fn from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef and p.prorettype<>'trigger'::regtype and p.proname<>all(${ANON_ENTRY_POINTS}) and has_function_privilege('anon',p.oid,'execute')`)problems.push(`definer executable by anon: ${r.fn}`);
  for(const r of await sql`select c.relname,p.privilege_type from pg_class c join pg_namespace n on n.oid=c.relnamespace cross join lateral (select unnest(array['INSERT','UPDATE','DELETE','TRUNCATE']) privilege_type) p where n.nspname='public' and c.relkind='r' and has_table_privilege('anon',c.oid,p.privilege_type)`)problems.push(`anon can ${r.privilege_type} ${r.relname}`);
  const exposed=await sql`select count(*)::int n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef and p.prorettype<>'trigger'::regtype and has_function_privilege('authenticated',p.oid,'execute')`;
  const definers=await sql`select count(*)::int n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef and p.prorettype<>'trigger'::regtype`;

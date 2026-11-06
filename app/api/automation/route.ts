@@ -1,0 +1,1 @@
+import{identity,json,sb,originAllowed,readObject}from'../../../lib/supabase';import{automationGET,automationPOST}from'../../../lib/automation-api.mjs';const deps={identity,json,sb,originAllowed,readObject};export const GET=(req:Request)=>automationGET(req,deps);export const POST=(req:Request)=>automationPOST(req,deps);

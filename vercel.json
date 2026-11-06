@@ -1,4 +1,10 @@
 {
   "framework": null,
-  "buildCommand": "node scripts/build-vercel.mjs"
+  "buildCommand": "node scripts/build-vercel.mjs",
+  "crons": [
+    {
+      "path": "/api/cron/automation",
+      "schedule": "30 3 * * *"
+    }
+  ]
 }

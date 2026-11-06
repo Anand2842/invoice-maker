@@ -1,0 +1,1 @@
+import{json,sb}from'../../../../lib/supabase';import{sendEmail}from'../../../../lib/email';import{cronGET}from'../../../../lib/automation-api.mjs';export const GET=(req:Request)=>cronGET(req,{json,sb,send:sendEmail,env:process.env});
