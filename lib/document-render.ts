@@ -15,6 +15,8 @@ export async function renderSavedDocument(access:string,business:string,id:strin
   if(Number(image.headers.get('Content-Length'))>2097152)throw Error('Use a business logo smaller than 2 MB.');
   data.logoBytes=new Uint8Array(await image.arrayBuffer());
  }
- return {record,business:b,pdf:await buildWithImages(data)};
+ // Font bytes are bundled with the server, and decoded only for Unicode PDFs.
+ const loadFonts=async()=>{const fonts=await import('./pdf-font-data.mjs');return fonts.loadFonts()};
+ return {record,business:b,pdf:await buildWithImages(data,{loadFonts})};
 }
 export function bytesToBase64(bytes:Uint8Array){let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(binary)}

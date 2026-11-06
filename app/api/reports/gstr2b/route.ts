@@ -1,0 +1,1 @@
+import{identity,json,sb,originAllowed,readObject}from'../../../../lib/supabase';import{gstr2bGET,gstr2bPOST}from'../../../../lib/gstr2b-api.mjs';const deps={identity,json,sb,originAllowed,readObject};export const GET=(req:Request)=>gstr2bGET(req,deps);export const POST=(req:Request)=>gstr2bPOST(req,deps);

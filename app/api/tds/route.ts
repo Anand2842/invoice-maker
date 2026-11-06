@@ -1,0 +1,1 @@
+import{identity,json,sb,originAllowed,readObject}from'../../../lib/supabase';import{tdsGET,tdsPOST}from'../../../lib/tds-api.mjs';const deps={identity,json,sb,originAllowed,readObject};export const GET=(req:Request)=>tdsGET(req,deps);export const POST=(req:Request)=>tdsPOST(req,deps);

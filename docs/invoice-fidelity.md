@@ -24,6 +24,10 @@ The observed source **Save & Continue** flow opens **Signup on Refrens**. The lo
 
 Authenticated Design, Share, account invoice storage, real payment collection, delivery, and final document export were not inspected and are not implemented. The local guest editor does not evaluate arbitrary custom column formulas or reproduce a protected item catalog/backend. The captured additional-cess configuration is retained locally; an unobserved complete cess calculation workflow is not claimed. Advanced rich-editor link/table popovers and transport fields beyond the captured public states are outside this verified reconstruction.
 
+## PDF text boundaries
+
+Generated invoice PDFs retain Helvetica for WinAnsi text and embed subsets of Noto Sans for supported additional Latin, Greek, Cyrillic and currency characters. Characters absent from those fonts and scripts requiring complex shaping are rejected with a direction to use Print / Save as PDF, where browser fonts and shaping are used. The separate statement and payment receipt PDF exporters still use standard PDF fonts; their browser print views support Unicode.
+
 ## Functional checks
 
 Automated checks exercise calculator totals (2 × 100 + 3 × 50 with 18% GST = 413.00; a 10% item discount gives 371.70), item operations, currency choices, tax removal/restoration, source optional sections, custom fields, source dialogs, malformed draft recovery, responsive draft restoration, source signup closure, and the separation of account credentials from local drafts. Bounded component QA compares shipping, custom fields, description, calendar, and signature at both canonical widths. Browser checks report no page JavaScript errors or invoice/account mutation requests.

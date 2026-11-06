@@ -1,5 +1,6 @@
 import { templateStyle, templates as pdfTemplates } from './pdf-templates/index.js';
 import { sourceAllocation, validateOrderConversion } from './source-allocation.mjs';
+import { parseFont, makeToUnicode, hexText } from './pdf-font.js';
 /**
  * Dependency-free, local PDF export. Import this module once before calling
  * window.RefrensDocumentExport.{build,download,preview}(document).
@@ -9,9 +10,9 @@ import { sourceAllocation, validateOrderConversion } from './source-allocation.m
  * rounded line amount. Shipping is an untaxed document charge. Split GST's odd
  * cent goes to SGST so the displayed components always reconcile.
  *
- * Boundaries: standard PDF Helvetica/WinAnsi supports Latin text, not every
- * writing system. Unsupported text is rejected rather than silently corrupted.
- * Currency codes are printed instead of unsupported currency glyphs. Uploaded
+ * WinAnsi documents use standard PDF fonts. The asynchronous exporter embeds
+ * Noto Sans subsets for additional supported text; complex scripts use browser print.
+ * Uploaded
  * logo/signature artwork is embedded by buildWithImages(); build() returns a visible warning.
  * Typed signature names are included. No network requests or print dialogs.
  */
@@ -35,7 +36,7 @@ const CP1252 = new Map([
 ]);
 
 export const boundaries = Object.freeze({
-  text: 'Latin text using standard PDF Helvetica/WinAnsi; unsupported scripts are rejected.',
+  text: 'Async PDF export supports WinAnsi and embedded Noto Sans Latin, Greek and Cyrillic text; synchronous build supports WinAnsi only. Other scripts may require Print / Save as PDF.',
   images: 'PNG/JPEG logo and signature artwork is embedded by buildWithImages, preview and download. Synchronous build returns text-only PDF warnings.',
   shipping: 'Shipping is an untaxed charge. Add a taxable shipping line item if tax applies.',
   rounding: 'Line amounts, line discounts and line tax are rounded half-up to two decimal places.',
@@ -235,7 +236,56 @@ function money(minor, currency) {
   return `${currency} ${new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(minor / 100)}`;
 }
 
+// Rendering is synchronous even when font loading and PDF compression are asynchronous.
+// The context is scoped to one layout pass and restored before yielding.
+let fontContext = null;
+const needsFont = Symbol('needs embedded font');
+function complexScript(character) {
+  for (const [name, pattern] of [
+    ['Devanagari', /\p{Script=Devanagari}/u], ['Bengali', /\p{Script=Bengali}/u],
+    ['Tamil', /\p{Script=Tamil}/u], ['Telugu', /\p{Script=Telugu}/u],
+    ['Gujarati', /\p{Script=Gujarati}/u], ['Gurmukhi', /\p{Script=Gurmukhi}/u],
+    ['Kannada', /\p{Script=Kannada}/u], ['Malayalam', /\p{Script=Malayalam}/u],
+    ['Odia', /\p{Script=Oriya}/u], ['Arabic', /\p{Script=Arabic}/u],
+    ['Hebrew', /\p{Script=Hebrew}/u], ['Thai', /\p{Script=Thai}/u],
+    ['CJK', /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u],
+    ['emoji', /\p{Extended_Pictographic}/u], ['combining marks', /\p{Mark}/u],
+  ]) if (pattern.test(character)) return name;
+  return null;
+}
+function scriptName(character) {
+  const complex = complexScript(character);
+  if (complex) return complex;
+  for (const [name, pattern] of [
+    ['Armenian', /\p{Script=Armenian}/u], ['Georgian', /\p{Script=Georgian}/u],
+    ['Runic', /\p{Script=Runic}/u], ['Ethiopic', /\p{Script=Ethiopic}/u],
+    ['Sinhala', /\p{Script=Sinhala}/u], ['Khmer', /\p{Script=Khmer}/u],
+    ['Myanmar', /\p{Script=Myanmar}/u], ['Lao', /\p{Script=Lao}/u],
+    ['Latin', /\p{Script=Latin}/u], ['Greek', /\p{Script=Greek}/u],
+    ['Cyrillic', /\p{Script=Cyrillic}/u],
+  ]) if (pattern.test(character)) return name;
+  return 'unrecognized script';
+}
+function unsupported(character) {
+  const script = scriptName(character);
+  return new RangeError(`PDF text contains an unsupported ${script} character (${character}, U+${character.codePointAt(0).toString(16).toUpperCase()}). Use Print / Save as PDF for this text.`);
+}
 function winAnsi(value) {
+  const original = String(value).normalize('NFC').replace(/\t/g, '    ');
+  if (!fontContext && original.includes('₹')) throw new RangeError('PDF text requires embedded fonts. Use Download, Preview or Print / Save as PDF.');
+  if (fontContext?.probe) {
+    for (const character of original) {
+      const code = character.codePointAt(0);
+      if (code === 0x20b9 || !(code === 10 || (code >= 32 && code <= 126) || (code >= 160 && code <= 255) || CP1252.has(code))) throw needsFont;
+    }
+  }
+  if (fontContext?.fonts) {
+    for (const character of original) {
+      if (character === '\n') continue;
+      if (complexScript(character) || !fontContext.fonts.regular.glyph(character.codePointAt(0)) || !fontContext.fonts.bold.glyph(character.codePointAt(0))) throw unsupported(character);
+    }
+    return original;
+  }
   let result = '';
   for (const character of String(value).normalize('NFC').replace(/\u20b9/g, 'INR ').replace(/\t/g, '    ')) {
     const code = character.codePointAt(0);
@@ -243,7 +293,7 @@ function winAnsi(value) {
     else if (CP1252.has(code)) result += String.fromCharCode(CP1252.get(code));
     else if ([0x200b, 0x200c, 0x200d, 0xfeff].includes(code)) continue;
     else if (code >= 0x2010 && code <= 0x2015) result += '-';
-    else throw new RangeError(`PDF text contains an unsupported character (${character}, U+${code.toString(16).toUpperCase()}). Use Latin text for this export.`);
+    else throw unsupported(character);
   }
   return result;
 }
@@ -266,6 +316,10 @@ const BOLD_LOWER = [556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,
 const PUNCTUATION = { ' ':278, '.':278, ',':278, ':':278, ';':278, '!':333, "'":278, '"':474, '(':333, ')':333, '[':278, ']':278, '{':389, '}':389, '/':278, '\\':278, '-':333, '_':556, '+':584, '=':584, '%':889, '&':722, '*':389, '?':611, '@':1015, '|':280, '<':584, '>':584, '#':556, '$':556, '^':469, '~':584, '`':333 };
 
 function textWidth(value, size = 9, bold = false) {
+  if (fontContext?.fonts) {
+    const font = bold ? fontContext.fonts.bold : fontContext.fonts.regular;
+    return [...value].reduce((sum, character) => sum + font.width(character.codePointAt(0)), 0) * size / 1000;
+  }
   let width = 0;
   for (const original of value) {
     const base = original.normalize('NFD').replace(/[\u0300-\u036f]/g, '')[0] || original;
@@ -309,7 +363,15 @@ class Layout {
   command(value) { this.pages.at(-1).push(value); }
   text(encoded, x, top, size = 9, bold = false, color = '0.14 0.16 0.22', align = 'left') {
     if (align === 'right') x -= textWidth(encoded, size, bold);
-    this.command(`BT /${bold && this.style.id === 'elegant' ? 'F3' : bold ? 'F2' : 'F1'} ${size} Tf ${color} rg 1 0 0 1 ${n(x)} ${n(PAGE.height - top)} Tm (${pdfEscape(encoded)}) Tj ET`);
+    if (fontContext?.fonts) {
+      const key = bold ? 'bold' : 'regular', font = fontContext.fonts[key];
+      for (const character of encoded) {
+        const cp = character.codePointAt(0);
+        if (complexScript(character) || !font.glyph(cp)) throw unsupported(character);
+        fontContext.used[key].add(cp);
+      }
+      this.command(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${color} rg 1 0 0 1 ${n(x)} ${n(PAGE.height - top)} Tm <${hexText(font, encoded)}> Tj ET`);
+    } else this.command(`BT /${bold && this.style.id === 'elegant' ? 'F3' : bold ? 'F2' : 'F1'} ${size} Tf ${color} rg 1 0 0 1 ${n(x)} ${n(PAGE.height - top)} Tm (${pdfEscape(encoded)}) Tj ET`);
   }
   line(y, color = '0.85 0.87 0.9') { this.command(`${color} RG 0.6 w ${PAGE.margin} ${n(PAGE.height - y)} m ${n(PAGE.width - PAGE.margin)} ${n(PAGE.height - y)} l S`); }
   rect(x, top, width, height, color) { this.command(`${color} rg ${n(x)} ${n(PAGE.height - top - height)} ${n(width)} ${n(height)} re f`); }
@@ -538,7 +600,7 @@ function typedSignature(value) {
   throw new TypeError('Signature must be a typed name or an image descriptor.');
 }
 
-function serializePDF(layout, doc) {
+function addFooters(layout, doc) {
   const count = layout.pages.length;
   layout.pages.forEach((commands, index) => {
     const original = layout.pages;
@@ -548,6 +610,11 @@ function serializePDF(layout, doc) {
     layout.text(`Page ${index + 1} of ${count}`, PAGE.width - PAGE.margin, 814, 8, false, '0.43 0.45 0.51', 'right');
     layout.pages = original;
   });
+}
+
+function serializePDF(layout, doc) {
+  addFooters(layout, doc);
+  const count = layout.pages.length;
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     `<< /Type /Pages /Count ${count} /Kids [${layout.pages.map((_, index) => `${5 + index * 2} 0 R`).join(' ')}] >>`,
@@ -573,7 +640,72 @@ function serializePDF(layout, doc) {
   return new TextEncoder().encode(output);
 }
 
-export function build(input) {
+// Streams and offsets are byte-addressed: embedded fonts and deflate output are binary.
+const pdfAscii = value => new TextEncoder().encode(value);
+function concatBytes(parts) {
+  const result = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
+  let offset = 0;
+  for (const part of parts) { result.set(part, offset); offset += part.length; }
+  return result;
+}
+async function deflate(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+function pdfUnicodeString(value) {
+  let hex = 'FEFF';
+  for (let index = 0; index < value.length; index++) hex += value.charCodeAt(index).toString(16).padStart(4, '0').toUpperCase();
+  return `<${hex}>`;
+}
+async function serializeUnicodePDF(layout, doc, context) {
+  const count = layout.pages.length, objects = [];
+  const put = (id, value) => { objects[id - 1] = typeof value === 'string' ? pdfAscii(value) : value; };
+  const stream = async (dictionary, data) => {
+    const compressed = await deflate(data);
+    return concatBytes([pdfAscii(`<< ${dictionary} /Filter /FlateDecode /Length ${compressed.length} >>\nstream\n`), compressed, pdfAscii('\nendstream')]);
+  };
+  put(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  put(2, `<< /Type /Pages /Count ${count} /Kids [${layout.pages.map((_, index) => `${5 + index * 2} 0 R`).join(' ')}] >>`);
+  let nextId = 5 + count * 2;
+  for (const [key, typeId, name] of [['regular', 3, 'FOLREG+NotoSans'], ['bold', 4, 'FOLBLD+NotoSans-Bold']]) {
+    const font = context.fonts[key], used = context.used[key], cidId = nextId++, descriptorId = nextId++, fileId = nextId++, unicodeId = nextId++;
+    const widths = new Map();
+    for (const cp of used) widths.set(font.glyph(cp), font.width(cp));
+    const w = [...widths].sort((a, b) => a[0] - b[0]).map(([gid, width]) => `${gid} [${width}]`).join(' ');
+    const descriptor = font.descriptor;
+    put(typeId, `<< /Type /Font /Subtype /Type0 /BaseFont /${name} /Encoding /Identity-H /DescendantFonts [${cidId} 0 R] /ToUnicode ${unicodeId} 0 R >>`);
+    put(cidId, `<< /Type /Font /Subtype /CIDFontType2 /BaseFont /${name} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor ${descriptorId} 0 R /CIDToGIDMap /Identity /W [${w}] >>`);
+    put(descriptorId, `<< /Type /FontDescriptor /FontName /${name} /Flags ${descriptor.flags} /FontBBox [${descriptor.bbox.join(' ')}] /ItalicAngle ${descriptor.italicAngle} /Ascent ${descriptor.ascent} /Descent ${descriptor.descent} /CapHeight ${descriptor.capHeight} /StemV ${key === 'bold' ? 120 : 80} /FontFile2 ${fileId} 0 R >>`);
+    const subset = font.subset(used);
+    put(fileId, await stream(`/Length1 ${subset.length}`, subset));
+    put(unicodeId, await stream('', pdfAscii(makeToUnicode(font, used))));
+  }
+  for (let index = 0; index < count; index++) {
+    const pageId = 5 + index * 2;
+    put(pageId, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE.width} ${PAGE.height}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 4 0 R >> >> /Contents ${pageId + 1} 0 R >>`);
+    put(pageId + 1, await stream('', pdfAscii(`${layout.pages[index].join('\n')}\n`)));
+  }
+  const infoId = nextId++;
+  put(infoId, `<< /Title ${pdfUnicodeString(`${doc.title} ${doc.number}`)} /Author ${pdfUnicodeString(doc.seller.name)} /Creator (Refrens local document export) /Producer (Browser-local PDF writer) >>`);
+  const parts = [pdfAscii('%PDF-1.4\n%Refrens local document export\n')], offsets = [0];
+  let length = parts[0].length;
+  for (let index = 0; index < objects.length; index++) {
+    offsets.push(length);
+    const object = concatBytes([pdfAscii(`${index + 1} 0 obj\n`), objects[index], pdfAscii('\nendobj\n')]);
+    parts.push(object); length += object.length;
+  }
+  const startXref = length;
+  let xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets.slice(1)) xref += `${String(offset).padStart(10, '0')} 00000 n \n`;
+  xref += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${startXref}\n%%EOF\n`;
+  parts.push(pdfAscii(xref));
+  return concatBytes(parts);
+}
+
+function buildInternal(input, context = null) {
+  const previousContext = fontContext;
+  fontContext = context;
+  try {
   const { document: doc, totals } = normalize(input);
   const warnings = imageWarnings(doc);
   const layout = new Layout(doc);
@@ -588,10 +720,14 @@ export function build(input) {
   const signature = typedSignature(doc.signature);
   if (signature) layout.section('Authorized signatory', signature);
   if (doc.embedImages && imageSource(doc.signature)) { layout.ensure(92); layout.paragraph('Authorized signature', { bold: true, gap: 2 }); layout.imageSlots.push({ kind: 'signature', page: layout.pages.length - 1, x: PAGE.margin, top: layout.y, width: 160, height: 60 }); layout.y += 68; }
-  const bytes = serializePDF(layout, doc);
+  if (context?.fonts) addFooters(layout, doc);
+  const bytes = context?.fonts ? null : serializePDF(layout, doc);
   const safeNumber = doc.number.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100) || 'draft';
-  return { bytes, mime: 'application/pdf', filename: `${doc.type}-${safeNumber}.pdf`, totals, warnings, pageCount: layout.pages.length, imageSlots: layout.imageSlots };
+  const result = { bytes, mime: 'application/pdf', filename: `${doc.type}-${safeNumber}.pdf`, totals, warnings, pageCount: layout.pages.length, imageSlots: layout.imageSlots };
+  return context?.fonts ? { result, layout, doc } : result;
+  } finally { fontContext = previousContext; }
 }
+export function build(input) { return buildInternal(input); }
 
 function requireBrowser() {
   if (typeof document === 'undefined' || typeof URL?.createObjectURL !== 'function') throw new Error('Download and preview require a browser. Use build() to obtain PDF bytes.');
@@ -703,10 +839,29 @@ function imageFormat(bytes, label) {
   if (!width || !height || width * height > 4000000) throw new Error(`${label}: use a valid PNG/JPEG image of at most 4 million pixels.`);
   return format;
 }
-export async function buildWithImages(input) {
+async function browserFonts() {
+  const read = async name => {
+    const response = await fetch(`/fonts/NotoSans-${name}.ttf`);
+    if (!response.ok) throw new Error('Could not load the PDF fonts. Please try again or use Print / Save as PDF.');
+    return new Uint8Array(await response.arrayBuffer());
+  };
+  const [regular, bold] = await Promise.all([read('Regular'), read('Bold')]);
+  return { regular, bold };
+}
+
+export async function buildWithImages(input, { loadFonts = browserFonts } = {}) {
   const sources = { logo: imageSource(input.logo) || (input.logoBytes instanceof Uint8Array ? input.logoBytes : null), signature: imageSource(input.signature) };
   const images = Object.fromEntries(Object.entries(sources).filter(([, v]) => v).map(([kind, value]) => { const bytes = imageBytes(value, kind); return [kind, { bytes, format: imageFormat(bytes, kind) }]; }));
-  const result = build({ ...input, logo: sources.logo, embedImages: true });
+  const documentInput = { ...input, logo: sources.logo, embedImages: true };
+  let result;
+  try { result = buildInternal(documentInput, { probe: true }); }
+  catch (error) {
+    if (error !== needsFont) throw error;
+    const bytes = await loadFonts();
+    const context = { fonts: { regular: parseFont(bytes.regular), bold: parseFont(bytes.bold) }, used: { regular: new Set(), bold: new Set() } };
+    const built = buildInternal(documentInput, context);
+    result = { ...built.result, bytes: await serializeUnicodePDF(built.layout, built.doc, context) };
+  }
   if (!Object.keys(images).length) return result;
   const { PDFDocument } = await import('./vendor/pdf-lib.esm.min.js');
   const pdf = await PDFDocument.load(result.bytes);
