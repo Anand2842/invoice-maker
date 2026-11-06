@@ -1,0 +1,1 @@
+import{identity,json,sb,originAllowed,readObject}from'../../../lib/supabase';import{importPOST}from'../../../lib/import-api.mjs';const deps={identity,json,sb,originAllowed,readObject};export const POST=(req:Request)=>importPOST(req,deps);
