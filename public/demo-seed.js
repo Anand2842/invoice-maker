@@ -8,10 +8,10 @@ const key=()=>crypto.randomUUID();
 const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body)});
 
 const CLIENTS=[
- {name:'Northstar Trading',email:'accounts@northstar.example.test',phone:'9000000101',address:'45 Sample Avenue, Lower Parel, Mumbai',state:'Maharashtra',gstin:'27AAAAA0000A1Z5'},
- {name:'Cedar & Co.',email:'billing@cedar.example.test',phone:'9000000102',address:'42 Example Road, Indiranagar, Bengaluru',state:'Karnataka',gstin:'29AAAAA0000A1Z5'},
- {name:'Lotus Design Studio',email:'hello@lotus.example.test',phone:'9000000103',address:'7 Park Street, Kolkata',state:'West Bengal',gstin:''},
- {name:'Greenleaf Cafe',email:'owner@greenleaf.example.test',phone:'9000000104',address:'3 Lake Road, Pune',state:'Maharashtra',gstin:''}];
+ {name:'Northstar Trading',email:'accounts@northstar.example.test',phone:'9000000101',address:'45 Sample Avenue, Lower Parel, Mumbai',gstState:'Maharashtra',gstin:'27AAAAA0000A1Z5'},
+ {name:'Cedar & Co.',email:'billing@cedar.example.test',phone:'9000000102',address:'42 Example Road, Indiranagar, Bengaluru',gstState:'Karnataka',gstin:'29AAAAA0000A1Z5'},
+ {name:'Lotus Design Studio',email:'hello@lotus.example.test',phone:'9000000103',address:'7 Park Street, Kolkata',gstState:'West Bengal',gstin:''},
+ {name:'Greenleaf Cafe',email:'owner@greenleaf.example.test',phone:'9000000104',address:'3 Lake Road, Pune',gstState:'Maharashtra',gstin:''}];
 const VENDORS=[
  {name:'Acme Supplies',email:'sales@acme.example.test',phone:'9000000201',address:'12 Demo Road, Bengaluru',gstin:'29BBBBB1111B1Z6'},
  {name:'Swift Logistics',email:'ops@swift.example.test',phone:'9000000202',address:'88 Transport Nagar, Pune',gstin:''},
@@ -32,7 +32,7 @@ async function ensureRecords(business,collection,rows){const have=await records(
  for(const row of rows)if(!out[row.name])out[row.name]=(await post('/api/records',{business,collection,demo:true,data:row})).record;
  return out}
 
-function party(c){return{name:c.name,email:c.email,phone:c.phone,address:c.address,street:c.address,gstin:c.gstin||'',gstState:c.state||''}}
+function party(c){return{name:c.name,email:c.email,phone:c.phone,address:c.address,street:c.address,gstin:c.gstin||'',gstState:c.gstState||''}}
 
 export async function seedSampleBusiness(business,progress=()=>{}){
  const ws=await api('/api/workspace'),b=ws.businesses.find(x=>x.id===business);if(!b)throw Error('Choose a business first');

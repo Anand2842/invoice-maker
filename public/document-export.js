@@ -462,7 +462,7 @@ function renderDetails(layout, doc) {
   const entries = detailEntries(doc.customFields);
   if (entries.length) layout.section('Document details', entries.join('\n'));
   if (doc.transport) layout.section('Transport details', detailEntries(doc.transport).join('\n'));
-  if (doc.taxDetails) { const details=Object.fromEntries(Object.entries(doc.taxDetails).filter(([key,value])=>value&&!(key==='reverseCharge'&&value==='No')));if(Object.keys(details).length)layout.section('Tax details',detailEntries(details).join('\n')); }
+  if (doc.taxDetails) { const details=Object.fromEntries(Object.entries(doc.taxDetails).filter(([key,value])=>value&&!(key==='reverseCharge'&&value==='No')));if(Object.keys(details).length)layout.section('Tax details',detailEntries(taxDetailLabels(details)).join('\n')); }
   if (doc.shipping && typeof doc.shipping === 'object') {
     const { amount: _amount, charge: _charge, ...details } = doc.shipping;
     const lines = detailEntries(details);
@@ -541,6 +541,38 @@ function totalLine(layout, label, amount, currency, final = false) {
   layout.y += final ? 37 : 22;
 }
 
+// GST invoices show the place of supply by state, and the total in words (Indian numbering: lakh, crore).
+const GST_STATES = { '01':'Jammu and Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh','05':'Uttarakhand','06':'Haryana','07':'Delhi','08':'Rajasthan','09':'Uttar Pradesh','10':'Bihar','11':'Sikkim','12':'Arunachal Pradesh','13':'Nagaland','14':'Manipur','15':'Mizoram','16':'Tripura','17':'Meghalaya','18':'Assam','19':'West Bengal','20':'Jharkhand','21':'Odisha','22':'Chhattisgarh','23':'Madhya Pradesh','24':'Gujarat','26':'Dadra and Nagar Haveli and Daman and Diu','27':'Maharashtra','29':'Karnataka','30':'Goa','31':'Lakshadweep','32':'Kerala','33':'Tamil Nadu','34':'Puducherry','35':'Andaman and Nicobar Islands','36':'Telangana','37':'Andhra Pradesh','38':'Ladakh','96':'Other Country','97':'Other Territory' };
+const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+function belowHundred(n) { return n < 20 ? ONES[n] : `${TENS[Math.floor(n / 10)]}${n % 10 ? ` ${ONES[n % 10]}` : ''}`; }
+function belowThousand(n) { const h = Math.floor(n / 100), r = n % 100; return [h ? `${ONES[h]} Hundred` : '', r ? belowHundred(r) : ''].filter(Boolean).join(' '); }
+export function indianWords(whole) {
+  let n = BigInt(whole); if (n === 0n) return 'Zero';
+  const parts = [];
+  const crore = n / 10000000n; n %= 10000000n;
+  if (crore) parts.push(`${indianWords(crore)} Crore`);
+  const lakh = Number(n / 100000n); n %= 100000n;
+  if (lakh) parts.push(`${belowHundred(lakh)} Lakh`);
+  const thousand = Number(n / 1000n); n %= 1000n;
+  if (thousand) parts.push(`${belowHundred(thousand)} Thousand`);
+  if (n) parts.push(belowThousand(Number(n)));
+  return parts.join(' ');
+}
+export function rupeesInWords(minor) {
+  const m = BigInt(minor), sign = m < 0n ? 'Minus ' : '', abs = m < 0n ? -m : m, rupees = abs / 100n, paise = Number(abs % 100n);
+  return `${sign}Rupees ${indianWords(rupees)}${paise ? ` and ${belowHundred(paise)} Paise` : ''} Only`;
+}
+function taxDetailLabels(details) {
+  const out = {};
+  for (const [key, value] of Object.entries(details)) {
+    if (key === 'placeOfSupply') { const code = String(value).padStart(2, '0'); out['Place of supply'] = GST_STATES[code] ? `${GST_STATES[code]} (${code})` : String(value); }
+    else if (key === 'reverseCharge') out['Reverse charge'] = value;
+    else out[key] = value;
+  }
+  return out;
+}
+
 function renderTotals(layout, doc, totals) {
   if (doc.type === 'delivery-challan') {
     layout.paragraph(`Total items: ${doc.items.length}    |    Total quantity: ${new Intl.NumberFormat('en-US', { maximumFractionDigits: 8 }).format(totals.quantity)}`, { bold: true, gap: 16 });
@@ -563,6 +595,7 @@ function renderTotals(layout, doc, totals) {
   if (minor.cess) totalLine(layout, 'Cess', minor.cess, doc.currency);
   if (doc.roundOff) totalLine(layout, 'Round-off', minor.roundOff, doc.currency);
   totalLine(layout, doc.type === 'quotation' ? 'Quotation total' : doc.type === 'purchase-order' ? 'Order total' : 'Total', minor.total, doc.currency, true);
+  if (doc.currency === 'INR') layout.paragraph(`Amount in words: ${rupeesInWords(minor.total)}`, { gap: 10 });
   if (totals.taxGroups.length) {
     const groups = totals.taxGroups.map(group => {
       const components = doc.taxType === 'GST' && doc.gstMode === 'split'
@@ -756,7 +789,7 @@ export async function preview(input, onTemplateChange) {
   const dialog = document.createElement('dialog');
   dialog.className = 'refrens-document-preview';
   dialog.setAttribute('aria-label', 'PDF document preview');
-  dialog.style.cssText = 'box-sizing:border-box;width:min(1100px,96vw);max-width:96vw;max-height:95vh;padding:20px;border:1px solid #dedbe8;border-radius:12px;background:white;color:#242033;box-shadow:0 20px 70px #0004;';
+  dialog.style.cssText = 'box-sizing:border-box;margin:auto;inset:0;width:min(1100px,96vw);max-width:96vw;max-height:95vh;padding:20px;border:1px solid #dedbe8;border-radius:12px;background:white;color:#242033;box-shadow:0 20px 70px #0004;';
   const toolbar = document.createElement('div');
   toolbar.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;';
   const heading = document.createElement('h2');

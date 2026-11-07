@@ -56,8 +56,13 @@ function addSampleBanner(){if(!sampleMode()||document.querySelector('[data-sampl
 
 function addGuideButton(){if(document.querySelector('[data-guide-button]'))return;const b=document.createElement('button');b.type='button';b.dataset.guideButton='true';b.className='folio-guide-button';b.innerHTML='<span aria-hidden="true">?</span> Help &amp; demo';b.addEventListener('click',()=>openGuide());document.body.append(b)}
 
+// Payment method fields stay free text, but offer the usual choices as a dropdown list.
+function paymentMethodSuggestions(){const attach=e=>{const input=e.target;if(!(input instanceof HTMLInputElement)||input.name!=='method'||input.getAttribute('list'))return;
+ if(!document.getElementById('folio-payment-methods')){const list=document.createElement('datalist');list.id='folio-payment-methods';for(const m of ['UPI','Bank transfer (NEFT/RTGS/IMPS)','Cash','Cheque','Debit or credit card','Payment link / gateway','Other'])list.append(new Option(m));document.body.append(list)}
+ input.setAttribute('list','folio-payment-methods');input.autocomplete='off'};document.addEventListener('focusin',attach);document.addEventListener('pointerdown',attach)}
+
 export async function openGuide(){const{showGuide}=await import('/guides.js');showGuide()}
 
 export async function api(path,options={},retried=false){const r=await fetch(path,{...options,headers:{...(options.body instanceof FormData?{}:{'Content-Type':'application/json'}),...options.headers}});const data=await r.json();if(!r.ok){if(r.status===401&&!retried&&path!=='/api/auth'){const refresh=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'refresh'})});if(refresh.ok)return api(path,options,true)}throw Object.assign(Error(data.error||'Request failed'),{status:r.status})}return data}
 export function selectedBusiness(businesses){const explicit=new URLSearchParams(location.search).get('business'),selected=explicit||localStorage.getItem('billing-active-business'),b=businesses.find(b=>b.id===selected)||(!explicit?businesses[0]:null);if(explicit&&!b)throw Error('This business is unavailable to your account.');if(b)localStorage.setItem('billing-active-business',b.id);return b}
-syncSampleParam();brandHeader();addWorkspaceNav();
+syncSampleParam();brandHeader();addWorkspaceNav();paymentMethodSuggestions();

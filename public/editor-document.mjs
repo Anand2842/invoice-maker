@@ -6,7 +6,7 @@ export const EDITOR_DOCUMENT_SCHEMA = 'folio.editor-document';
 export const EDITOR_DOCUMENT_VERSION = 1;
 const types = new Set(['invoice','gst-invoice','quotation','proforma','purchase-order','delivery-challan','commercial-invoice','credit-note','debit-note']);
 const templates = new Set(['classic','modern','minimal','elegant','compact']);
-const documentKeys = new Set(['sourceRecord','crmCanonicalLeadId','crmLeadVersion','crmPipelineId','orderConversion','sourceOrderId','sourceOrderNumber','sourceQuotationId','crmLeadId','crmQuoteId','type','template','brandColor','bank','clientId','number','date','dueDate','currency','roundOff','originalDocumentId','originalDocumentNumber','originalDocumentDate','adjustmentReason','seller','buyer','taxType','gstMode','items','notes','terms','customFields','transport','shipping','gstReporting','taxDetails','attachments','signature','logo','status']);
+const documentKeys = new Set(['sourceRecord','crmCanonicalLeadId','crmLeadVersion','crmPipelineId','orderConversion','sourceOrderId','sourceOrderNumber','sourceQuotationId','crmLeadId','crmQuoteId','type','template','brandColor','bank','clientId','number','date','dueDate','paymentTerms','currency','roundOff','originalDocumentId','originalDocumentNumber','originalDocumentDate','adjustmentReason','seller','buyer','taxType','gstMode','items','notes','terms','customFields','transport','shipping','gstReporting','taxDetails','attachments','signature','logo','status']);
 const fail = () => { throw Error('This document draft format could not be read. It has been preserved on this device.'); };
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype,null].includes(Object.getPrototypeOf(value));
 function jsonCopy(value, depth=0) {
@@ -22,7 +22,7 @@ function jsonCopy(value, depth=0) {
 function validate(value) {
   if(!object(value)||!types.has(value.type)||!object(value.seller)||!object(value.buyer)||!Array.isArray(value.items)||!value.items.length||value.items.length>1000)fail();
   if(Object.keys(value).some(key=>!documentKeys.has(key)))fail();
-  for(const key of ['number','date','dueDate','currency','notes','terms','signature','logo','brandColor','status','originalDocumentId','originalDocumentNumber','originalDocumentDate','adjustmentReason','clientId'])if(value[key]!==undefined&&value[key]!==null&&typeof value[key]!=='string')fail();
+  for(const key of ['number','date','dueDate','paymentTerms','currency','notes','terms','signature','logo','brandColor','status','originalDocumentId','originalDocumentNumber','originalDocumentDate','adjustmentReason','clientId'])if(value[key]!==undefined&&value[key]!==null&&typeof value[key]!=='string')fail();
   if(value.template!==undefined&&!templates.has(value.template))fail();
   if(value.taxType!==undefined&&!['GST','VAT','NONE'].includes(value.taxType))fail();
   if(value.gstMode!==undefined&&!['split','igst'].includes(value.gstMode))fail();

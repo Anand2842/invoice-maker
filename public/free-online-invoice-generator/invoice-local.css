@@ -22,3 +22,24 @@ form .RXXMG::after,form .iegBmO::after,[role="dialog"] .RXXMG::after{border:2px 
 @media(max-width:568px){.folio-item-extras{gap:12px}.folio-item-extras .independent-extra-field{flex:1 1 110px}}
 
 .folio-editor [data-folio-primary]{background:#6542a6!important;border-color:#6542a6!important;color:#fff!important}
+/* Payment terms beside the due date */
+.folio-payment-terms{display:flex;align-items:center;gap:10px;margin:6px 0 10px;font:500 14px/1.3 inherit;color:#475467}
+.folio-payment-terms select{min-width:150px;padding:7px 10px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;font:inherit;color:#101828}
+.folio-payment-terms select:focus{outline:2px solid var(--form-color,#6040a0);outline-offset:1px}
+/* Lifecycle actions under the toolbar */
+.document-lifecycle-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.document-lifecycle-actions>p{flex:1 1 100%;margin:8px 0 0}
+.document-lifecycle-actions button{border:1px solid #c9b6e9;border-radius:6px;padding:8px 12px;background:#fff;color:#452677;font:500 14px/1.2 inherit;cursor:pointer}
+.document-lifecycle-actions button[data-lifecycle-action=issue]{background:#6542a6;border-color:#6542a6;color:#fff}
+.document-lifecycle-actions button:hover:not(:disabled){border-color:#6542a6}
+.document-lifecycle-actions button:disabled{opacity:.55;cursor:not-allowed}
+/* Terms & Conditions controls */
+.Terms_termsGroupHeader__nnzP3{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.Terms_termFieldRow___KsEA{display:flex;align-items:center;gap:8px}
+.Terms_termFieldRow___KsEA>:first-child{flex:1;min-width:0}
+.Terms_cancelButton__xYrI_,.Terms_swapButton__HkdtI{display:inline-grid;place-items:center;width:28px;height:28px;padding:0;border:1px solid #e4e7ec;border-radius:6px;background:#fff;color:#6542a6;cursor:pointer;flex:none}
+.Terms_cancelButton__xYrI_ svg,.Terms_swapButton__HkdtI svg{width:14px;height:14px}
+.Terms_cancelButton__xYrI_:hover,.Terms_swapButton__HkdtI:hover{border-color:#6542a6;background:#f8f5ff}
+.Terms_addTermRow__zcfru{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px}
+.Terms_actionButton__4RTfy{display:inline-flex;align-items:center;gap:6px;padding:6px 2px;border:0;background:none;color:#6542a6;font:500 14px/1.2 inherit;cursor:pointer}
+.Terms_actionButton__4RTfy:hover{text-decoration:underline}
