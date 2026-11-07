@@ -19,3 +19,12 @@ test('GST PDF shows place of supply by state and the total in words',()=>{
  assert.match(text,/Amount in words: Rupees Seven Hundred Sixteen and Eighty Paise Only/);
  assert.match(text,/HSN\/SAC: 4802/);
 });
+
+test('PDF party block prints the country once, by name, and skips a bare dialling code',()=>{
+ const text=Buffer.from(build({type:'invoice',number:'INV-2',date:'2026-11-07',currency:'INR',seller:{name:'S',address:'Maharashtra, IN',country:'IN',phone:'+91'},buyer:{name:'B',address:'12 MG Road, Bengaluru, Karnataka, IN',country:'IN',phone:'+91 98450 12345'},items:[{name:'Work',quantity:1,rate:100}]}).bytes).toString('latin1');
+ assert.match(text,/\(Maharashtra\)/);
+ assert.match(text,/\(12 MG Road, Bengaluru, Karnataka\)/);
+ assert.equal((text.match(/\(India\)/g)||[]).length,2);
+ assert.doesNotMatch(text,/\(IN\)|\(\+91\)/);
+ assert.match(text,/\+91 98450 12345/);
+});

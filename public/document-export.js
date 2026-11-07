@@ -411,9 +411,23 @@ class Layout {
   }
 }
 
+const COUNTRY_NAMES = { IN: 'India', US: 'United States', GB: 'United Kingdom', AE: 'United Arab Emirates', SG: 'Singapore', AU: 'Australia', CA: 'Canada', DE: 'Germany', FR: 'France', NP: 'Nepal', BD: 'Bangladesh', LK: 'Sri Lanka' };
+// The editor folds the country code into the address and pre-fills a dialling code; print each fact once and skip
+// a phone that is only "+91".
+function partyContact(value) {
+  const code = String(value.country || '').trim(), country = COUNTRY_NAMES[code.toUpperCase()] || code;
+  let address = String(value.address || '').trim();
+  for (const tail of [code, country]) if (tail && address.toLowerCase().endsWith(', ' + tail.toLowerCase())) address = address.slice(0, -(tail.length + 2)).trim();
+  if (tail(address, code) || tail(address, country)) address = '';
+  const phone = String(value.phone || '').replace(/\D/g, '').length >= 6 ? value.phone : '';
+  return { address, country, phone };
+}
+const tail = (text, word) => Boolean(word) && text.toLowerCase() === String(word).toLowerCase();
+
 function partyLines(value, width) {
   const lines = wrap(value.name, width, 11, true).map(line => ({ line, bold: true, size: 11 }));
-  for (const text of [value.address, value.country, value.email, value.phone, value.gstin ? `GSTIN: ${value.gstin}` : '', value.taxId ? `Tax ID: ${value.taxId}` : ''].filter(Boolean)) {
+  const contact = partyContact(value);
+  for (const text of [contact.address, contact.country, value.email, contact.phone, value.gstin ? `GSTIN: ${value.gstin}` : '', value.taxId ? `Tax ID: ${value.taxId}` : ''].filter(Boolean)) {
     lines.push(...wrap(text, width, 9).map(line => ({ line, bold: false, size: 9 })));
   }
   return lines;

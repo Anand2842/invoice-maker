@@ -1,5 +1,6 @@
 // "How this page works": plain-language guide for each workspace page, with one-click sample data.
 import {api,sampleMode,setSampleMode,selectedBusiness} from '/workspace-shell.js';
+import {loginURL} from '/auth-links.js';
 
 const G={
  '/dashboard/':{title:'Your business at a glance',why:'See what you have billed, what clients still owe you and what you have spent this month.',steps:['Pick your business at the top.','Read the four cards: billed this month, still to collect, overdue, and expenses.','Click an overdue amount to see which invoices are late.'],terms:[['Pending','Invoices you have sent that are not fully paid yet.'],['Overdue','Pending invoices whose due date has passed.']],sample:'four invoices in different states, payments and expenses, so every card shows a number.'},
@@ -57,7 +58,7 @@ export function showGuide(){
  el.querySelector('.folio-guide-close').addEventListener('click',close);back.addEventListener('click',close);document.addEventListener('keydown',onKey);
  el.querySelector('[data-sample-off]')?.addEventListener('click',()=>setSampleMode(false));
  el.querySelector('[data-sample-on]')?.addEventListener('click',async e=>{const btn=e.currentTarget,status=el.querySelector('.folio-guide-demo [role=status]');btn.disabled=true;
-  try{const auth=await fetch('/api/auth').then(r=>r.ok?r.json():{});if(!auth.user){status.textContent='Sign in first. Sample data is kept in your own account.';location.assign('/services/?account=login');return}
+  try{const auth=await fetch('/api/auth').then(r=>r.ok?r.json():{});if(!auth.user){status.textContent='Sign in first. Sample data is kept in your own account.';location.assign(loginURL());return}
    const ws=await api('/api/workspace');if(!ws.businesses.length){status.textContent='Create your business first, then try the sample.';location.assign('/start/');return}
    const business=selectedBusiness(ws.businesses);const{seedSampleBusiness}=await import('/demo-seed.js');await seedSampleBusiness(business.id,m=>status.textContent=m);setSampleMode(true)}
   catch(error){status.textContent='Sample data could not be prepared: '+error.message;btn.disabled=false}});
