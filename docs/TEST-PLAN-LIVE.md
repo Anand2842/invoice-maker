@@ -133,5 +133,10 @@ Tester: Claude, driving the owner's Chrome. Date: 7 November 2026. Release: `p0-
 | B3.6 | Pass, 1 note | ₹5,000 UPI on SAMPLE-INV-004: method suggestions shown, balance 14,868 → 9,868, receipt PDF offered. The payment dialog still uses jargon ("direct receipt capacity", "cash allocations/releases") |
 | B3.7 | Pass | Remaining ₹9,868 by bank transfer: balance 0; sample pending 45,488 → 30,620 |
 | B6.1 | Pass | Real records after sample writes: 0 documents, totals ₹0, invoice counter still 1 |
-| B3.1–B3.5, B3.8–B3.11, B4, B5, B6.2–B6.3 | Not run yet | Paused at a usage limit; resume in the next session |
+| B3.1 | Fail → fixed in `335b728` | Client saved with GSTIN "27BAD". Server now rejects bad client/vendor GSTINs with a plain message |
+| B3.2 | Pass | Bad HSN "12ab" rejected ("HSN/SAC must contain 4, 6 or 8 digits"); item saved with HSN 9983, 18%. GST rate is a fixed list, so >100 can't be entered |
+| B3.3 | Pass, 2 fixes | Saved client fills name, GSTIN and State; saved item fills HSN, GST, rate. Pickers opened top-left: centred. Signed-in intro said "Sign in to save": fixed |
+| B3.4 | Pass | Saved as INV-000001 in the sample series; "Ten Thousand Rupees Only" |
+| B3.5 | Fail → fixed in `335b728` | Issue worked on the server, but the editor then showed "Lock this older invoice" and a draft message; drafts said "saved before issuing was tracked"; jargon confirmation. All fixed and re-tested locally |
+| B3.8 | Fail → fixed | Guide promised "convert it to an invoice" but there was no button. Added Convert to invoice on saved quotations and proformas; tested locally (lines, client, own number, Net 15, survives reload) |
 
