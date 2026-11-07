@@ -39,7 +39,7 @@ const G={
  '/audit/':{title:'Activity log',why:'Who changed what, and when, across your business.',steps:['Filter by area.','Open an entry to see the details.'],sample:'activity from the sample business.'},
  'editor':{title:'Creating an invoice',why:'Fill in the client and items. Folio works out GST, totals and the amount in words.',steps:['Click Choose saved client, or type the client’s details.','Click Add saved item, or type each line with quantity and rate.','Save to account. Then Issue it when it is final.','Download the PDF or use Share & send.'],terms:[['IGST or CGST + SGST','Same state as you: CGST + SGST. Different state: IGST. Folio picks this from the two GSTINs.'],['Issue','Makes the invoice final and adds it to what the client owes you.']],sample:'saved clients and items you can pick in the editor.'}};
 
-function guideKey(){const p=new URLSearchParams(location.search);if(location.pathname==='/services/'&&p.get('service'))return p.get('service');if(['/free-online-invoice-generator/','/invoice-editor/'].includes(location.pathname))return 'editor';return location.pathname}
+function guideKey(){const p=new URLSearchParams(location.search),path=location.pathname.endsWith('/')?location.pathname:location.pathname+'/';if(path==='/services/'&&p.get('service'))return p.get('service');if(['/free-online-invoice-generator/','/invoice-editor/'].includes(path))return 'editor';return path}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 export function showGuide(){
