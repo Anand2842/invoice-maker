@@ -131,8 +131,10 @@ const config = {
       },
       status: 308,
     },
+    // Clean URLs for pages, but not the invoice editor's HTML fragments: invoice-app.js fetches them by their .html
+    // name, and nothing serves the extensionless URL a redirect would send it to (the editor 404s).
     {
-      src: "^/(.*)\\.html/?$",
+      src: "^/(?!free-online-invoice-generator/)(.*)\\.html/?$",
       headers: {
         Location: "/$1",
       },
