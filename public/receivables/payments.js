@@ -126,11 +126,11 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
   intro.textContent = (dataMode ? 'Demo data · ' : '') + 'Recorded payments and corrections for this invoice. Recording a payment does not collect money.';
   const settlement=response.settlement;
   if(settlement){
-   const summary=el('section',null,'fp-notice');summary.append(el('h3','Dated invoice settlement'),el('p','Through '+settlement.asOf+' · balance '+current.currency+' '+(settlement.balance===null?'Unavailable for this draft/undated legacy state':cashMoney(settlement.balance))+' · direct receipt capacity '+current.currency+' '+cashMoney(settlement.recordableAmount)));
+   const summary=el('section',null,'fp-notice');summary.append(el('h3','Dated invoice settlement'),el('p','Through '+settlement.asOf+' · balance '+current.currency+' '+(settlement.balance===null?'Not available for this document yet':cashMoney(settlement.balance))+' · direct receipt capacity '+current.currency+' '+cashMoney(settlement.recordableAmount)));
    summary.append(el('p','Direct receipts, credit/debit notes, cash allocations/releases and customer credit refunds are included once. Unapplied cash stays outside invoice balances. Capacity also protects later recorded settlements; record excess money as an explicit cash advance.','fp-muted'));
    const cash=el('a','Open cash / advances');cash.href='/cash/?'+new URLSearchParams({business:businessId,demo:String(dataMode),date:settlement.asOf});summary.append(cash);
    if(settlement.inheritedCurrencyWarnings)summary.append(el('p',settlement.inheritedCurrencyWarnings+' retained payment record(s) have no currency; the linked invoice currency is inherited for review. No record was backfilled.','fp-muted'));
-   if(settlement.snapshotKind==='legacy-current')summary.append(el('p','Legacy-current document view: issue history is not fabricated. Freeze/post its snapshot before automatic ledger workflows.','fp-muted'));
+   if(settlement.snapshotKind==='legacy-current')summary.append(el('p','This invoice was created before issuing was tracked. Lock it, then add it to your books, so payments and reports include it.','fp-muted'));
    if(settlement.paymentsTruncated||settlement.allocationsTruncated||settlement.refundsTruncated)summary.append(el('p','History below shows the latest 1,000 events of each kind. The dated balance/capacity includes every scoped event.','fp-muted'));
    content.append(summary);
   }

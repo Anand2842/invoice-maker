@@ -5,9 +5,9 @@
     "source": "https://www.refrens.com/free-accounting-software",
     "group": "Products",
     "module": "journals",
-    "launchStatus": "Basic",
-    "launchName": "Manual accounting journals",
-    "launchDescription": "Add balanced journal entries and export CSV. Trial balance, P&L and balance sheet are coming soon.",
+    "launchStatus": "Available",
+    "launchName": "Books",
+    "launchDescription": "Profit and loss, balance sheet, trial balance and general ledger. Invoices, bills and payments post automatically once the books are set up.",
     "actionLabel": ""
   },
   {
@@ -26,9 +26,9 @@
     "source": "https://www.refrens.com/gst-billing-software",
     "group": "Products",
     "module": "documents",
-    "launchStatus": "Basic",
+    "launchStatus": "Available",
     "launchName": "GST invoicing",
-    "launchDescription": "Create GST invoices and review workpapers. Government filing, IRN and eWay Bill submission are coming soon.",
+    "launchDescription": "GST invoices with HSN/SAC, place of supply, IGST or CGST + SGST, and GSTR-1 / GSTR-3B figures. e-Invoice and e-Way Bill filing are practice-only for now.",
     "actionLabel": ""
   },
   {
@@ -77,9 +77,9 @@
     "source": "https://www.refrens.com/inventory-management-software",
     "group": "Products",
     "module": "items",
-    "launchStatus": "Basic",
-    "launchName": "Basic inventory records",
-    "launchDescription": "Manage item quantities, rates and reorder levels. Automatic stock movements, warehouses and valuation are coming soon.",
+    "launchStatus": "Available",
+    "launchName": "Items & stock",
+    "launchDescription": "Items with HSN/SAC, GST rate and price. Stock in and out, opening stock and first-in-first-out valuation are on the Stock page.",
     "actionLabel": ""
   },
   {
@@ -99,9 +99,9 @@
     "source": "https://www.refrens.com/vendor-management-software",
     "group": "Products",
     "module": "vendors",
-    "launchStatus": "Basic",
-    "launchName": "Vendor directory",
-    "launchDescription": "Save vendor contacts and use them in purchase orders. Vendor bills, payment allocation and payable statements are coming soon.",
+    "launchStatus": "Available",
+    "launchName": "Vendors",
+    "launchDescription": "Save vendors with GSTIN and state, record their bills, pay them, and see a statement of what you owe.",
     "actionLabel": ""
   },
   {
@@ -120,9 +120,9 @@
     "source": "https://www.refrens.com/rf-sales-crm",
     "group": "Products",
     "module": "leads",
-    "launchStatus": "Basic",
-    "launchName": "Basic sales CRM",
-    "launchDescription": "Track leads, stages and values; create quotations. Automated lead ingestion and advanced CRM workflows are coming soon.",
+    "launchStatus": "Available",
+    "launchName": "Leads",
+    "launchDescription": "Track leads through stages, log follow-ups and turn a lead into a quotation.",
     "actionLabel": ""
   },
   {
@@ -142,9 +142,9 @@
     "source": "https://www.refrens.com/lead-management-software",
     "group": "Products",
     "module": "leads",
-    "launchStatus": "Basic",
-    "launchName": "Basic lead management",
-    "launchDescription": "Add leads, change stages and generate quotations. Automated ingestion is coming soon.",
+    "launchStatus": "Available",
+    "launchName": "Leads",
+    "launchDescription": "Add leads, move them through stages and create a quotation when they are ready.",
     "actionLabel": ""
   },
   {
@@ -153,9 +153,9 @@
     "source": "https://www.kherpa.com/",
     "group": "Products",
     "module": "subscriptions",
-    "launchStatus": "Basic",
-    "launchName": "Recurring invoice schedules",
-    "launchDescription": "Track schedules and generate each invoice manually. Automatic runs, charging and dunning are coming soon.",
+    "launchStatus": "Available",
+    "launchName": "Recurring invoices",
+    "launchDescription": "Set a schedule and Folio creates the invoice draft each time, once a day. Automatic card charging is not included.",
     "actionLabel": ""
   },
   {
@@ -378,9 +378,9 @@
     "source": "https://www.refrens.com/free-expense-management-software",
     "group": "Products",
     "module": "expenses",
-    "launchStatus": "Basic",
-    "launchName": "Manual expense records",
-    "launchDescription": "Record expenses and reviewed input tax. OCR, automatic ingestion and bank reconciliation are coming soon.",
+    "launchStatus": "Available",
+    "launchName": "Expenses",
+    "launchDescription": "Record paid expenses with GST input tax; they post to your books. Match them to your bank statement on Bank matching.",
     "actionLabel": ""
   },
   {
@@ -399,9 +399,9 @@
     "source": "https://www.refrens.com/rf-sales-pipeline-management-software",
     "group": "Products",
     "module": "leads",
-    "launchStatus": "Basic",
-    "launchName": "Basic sales pipeline",
-    "launchDescription": "Manage lead stages and export records. Advanced sales automation is coming soon.",
+    "launchStatus": "Available",
+    "launchName": "Sales pipeline",
+    "launchDescription": "Move leads through stages, set follow-ups and export the list.",
     "actionLabel": ""
   },
   {

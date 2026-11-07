@@ -1,7 +1,8 @@
+import{plainErrorBody}from'./plain-errors.mjs';
 // Only the publishable key is needed at runtime. User JWTs keep RLS active.
 export const SUPABASE_URL='https://digewoxoqblxlfnekjmc.supabase.co';
 export const SUPABASE_KEY='sb_publishable_LpqjFoIBeIsyExLv9mF2zQ_60GTF8tr';
-export const json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
+export const json=(data:unknown,status=200)=>Response.json(status>=400?plainErrorBody(data):data,{status,headers:{'Cache-Control':'no-store'}});
 export function originAllowed(req:Request){const origin=req.headers.get('origin');return !origin||origin===new URL(req.url).origin;}
 export function token(req:Request){const cookie=req.headers.get('cookie')||'';return cookie.split(';').map(x=>x.trim()).find(x=>x.startsWith('billing_access='))?.slice(15)||'';}
 export function refreshToken(req:Request){return(req.headers.get('cookie')||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('billing_refresh='))?.slice(16)||'';}
