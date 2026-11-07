@@ -1,9 +1,63 @@
 import {loginURL} from '/auth-links.js';
-export const navItems=[['Dashboard','/dashboard/'],['Documents','/services/?service=invoicing'],['Receivables','/receivables/'],['Clients','/services/?service=clients'],['Vendors','/services/?service=vendors'],['Payables','/payables/'],['Cash & advances','/cash/'],['Credits & refunds','/credits/'],['Mock refund jobs','/mock-refunds/'],['Cash statements','/reports/cash-statement/'],['Vendor statements','/reports/vendor-statement/'],['Bank reconciliation','/banking/'],['Sales orders','/orders/'],['Inventory','/inventory/'],['Expenses','/services/?service=expenses'],['CRM','/crm/'],['Accounting','/accounting/'],['Source reconciliation','/accounting/source-postings/'],['Control review','/accounting/review/'],['Statements','/reports/statements/'],['GST reports','/reports/gst/'],['GSTR-2B reconciliation','/reports/gstr2b/'],['e-Invoice & e-Way Bill','/compliance/'],['TDS','/tds/'],['Automation & payments','/automation/'],['Import data','/import/'],['Team','/team/'],['Audit trail','/audit/'],['Settings','/settings/']];
+
+// Grouped like the work a small business does, in plain words. Pages not listed (developer and test tools) stay reachable by URL.
+export const navGroups=[
+ ['',[['Dashboard','/dashboard/'],['Getting started','/start/']]],
+ ['Sales',[['Invoices & documents','/services/?service=invoicing'],['Quotations','/services/?service=quotation-software'],['Sales orders','/orders/'],['Clients','/services/?service=clients'],['Leads','/crm/'],['Money to collect','/receivables/'],['Client statements','/reports/statements/']]],
+ ['Purchases',[['Vendors','/services/?service=vendors'],['Bills to pay','/payables/'],['Expenses','/services/?service=expenses'],['Vendor statements','/reports/vendor-statement/']]],
+ ['Money',[['Bank matching','/banking/'],['Advances & unapplied cash','/cash/'],['Credits & refunds','/credits/'],['Cash statements','/reports/cash-statement/'],['Reminders & payment links','/automation/']]],
+ ['Stock',[['Items','/services/?service=inventory'],['Stock & valuation','/inventory/']]],
+ ['Accounting',[['Books','/accounting/'],['General ledger','/accounting/general-ledger/'],['Automatic postings','/accounting/source-postings/'],['Month-end check','/accounting/review/']]],
+ ['GST & tax',[['GST returns','/reports/gst/'],['Match purchases (GSTR-2B)','/reports/gstr2b/'],['e-Invoice & e-Way Bill','/compliance/'],['TDS','/tds/']]],
+ ['Business',[['Settings','/settings/'],['Team','/team/'],['Import data','/import/'],['Activity log','/audit/']]]];
+export const navItems=navGroups.flatMap(([,items])=>items);
+
+const slash=p=>p.endsWith('/')?p:p+'/';
+function isCurrent(href){const u=new URL(href,location.origin),here=slash(location.pathname);if(u.search){const want=new URLSearchParams(u.search).get('service');return here===u.pathname&&new URLSearchParams(location.search).get('service')===want}return here===u.pathname}
+
+// Sample-data mode: one switch for every page. The URL is the source of truth while browsing; the session flag carries it between pages.
+export function sampleMode(){const p=new URLSearchParams(location.search);if(p.has('demo')){const on=p.get('demo')==='true';try{sessionStorage.setItem('billing-demo-mode',String(on))}catch{}return on}try{return sessionStorage.getItem('billing-demo-mode')==='true'}catch{return false}}
+export function setSampleMode(on){try{sessionStorage.setItem('billing-demo-mode',String(on))}catch{}const u=new URL(location.href);u.searchParams.set('demo',String(on));location.assign(u)}
+function syncSampleParam(){const p=new URLSearchParams(location.search);if(!p.has('demo')&&sampleMode()){const u=new URL(location.href);u.searchParams.set('demo','true');history.replaceState(history.state,'',u)}}
+
+function ensureStyles(){if(document.querySelector('link[data-shell-css]'))return;const l=document.createElement('link');l.rel='stylesheet';l.href='/workspace-shell.css';l.dataset.shellCss='true';document.head.append(l)}
+
 export function brandHeader(){const header=document.querySelector('body>header');if(!header)return;header.classList.add('folio-header');const brand=header.querySelector('.brand');if(brand){brand.innerHTML='folio.<small>Billing workspace</small>';brand.href='/';brand.setAttribute('aria-label','Folio home')}const links=[...header.querySelectorAll('a[data-account-link],a[href*="returnTo="]')];links.forEach(a=>a.href=loginURL());
  // Signed-in visitors should not be offered "Log in".
  if(links.length)fetch('/api/auth').then(r=>r.ok?r.json():null).then(d=>{if(d?.user)links.forEach(a=>{a.textContent='Workspace';a.href='/services/'})}).catch(()=>{})}
-export function addWorkspaceNav(){if(document.querySelector('[data-workspace-nav]'))return;const nav=document.createElement('nav');nav.dataset.workspaceNav='true';nav.className='workspace-nav';nav.setAttribute('aria-label','Workspace');for(const [label,href]of navItems){const a=document.createElement('a');a.href=href;a.textContent=label;if(location.pathname+location.search===href||location.pathname===href)a.setAttribute('aria-current','page');nav.append(a)}document.querySelector('header')?.after(nav)}
+
+export function addWorkspaceNav(){
+ if(document.querySelector('[data-workspace-nav]'))return;ensureStyles();
+ const aside=document.createElement('aside');aside.dataset.workspaceNav='true';aside.className='folio-sidebar';aside.id='folio-sidebar';aside.setAttribute('aria-label','Workspace');
+ let open={};try{open=JSON.parse(localStorage.getItem('folio-nav-open')||'{}')}catch{}
+ const top=document.createElement('div');top.className='folio-sidebar-top';top.innerHTML='<a class="folio-sidebar-brand" href="/dashboard/">folio.</a><a class="folio-sidebar-new" href="/free-online-invoice-generator/?document=invoice&fresh=true">+ New invoice</a>';aside.append(top);
+ const nav=document.createElement('nav');nav.setAttribute('aria-label','Workspace sections');
+ for(const[group,items]of navGroups){const current=items.some(([,h])=>isCurrent(h));
+  const list=document.createElement('div');list.className='folio-sidebar-links';
+  for(const[label,href]of items){const a=document.createElement('a');a.href=href;a.textContent=label;if(isCurrent(href))a.setAttribute('aria-current','page');list.append(a)}
+  if(!group){nav.append(list);continue}
+  const d=document.createElement('details');d.open=current||open[group]!==false;const s=document.createElement('summary');s.textContent=group;d.append(s,list);
+  d.addEventListener('toggle',()=>{if(current)return;open[group]=d.open;try{localStorage.setItem('folio-nav-open',JSON.stringify(open))}catch{}});nav.append(d)}
+ aside.append(nav);
+ const help=document.createElement('button');help.type='button';help.className='folio-sidebar-help';help.textContent='How this page works';help.addEventListener('click',()=>openGuide());aside.append(help);
+ document.body.prepend(aside);document.documentElement.classList.add('folio-has-sidebar');
+ // Phone and tablet: the sidebar becomes a drawer behind a Menu button in the page header.
+ const header=document.querySelector('body>header')||document.querySelector('header');const menu=document.createElement('button');menu.type='button';menu.className='folio-menu-button';menu.textContent='Menu';menu.setAttribute('aria-controls','folio-sidebar');menu.setAttribute('aria-expanded','false');
+ const scrim=document.createElement('div');scrim.className='folio-scrim';scrim.hidden=true;document.body.append(scrim);
+ const toggle=on=>{document.documentElement.classList.toggle('folio-nav-open',on);menu.setAttribute('aria-expanded',String(on));scrim.hidden=!on};
+ menu.addEventListener('click',()=>toggle(!document.documentElement.classList.contains('folio-nav-open')));scrim.addEventListener('click',()=>toggle(false));document.addEventListener('keydown',e=>{if(e.key==='Escape')toggle(false)});
+ (header||aside).prepend(menu);
+ addSampleBanner();addGuideButton();
+}
+
+function addSampleBanner(){if(!sampleMode()||document.querySelector('[data-sample-banner]'))return;const b=document.createElement('div');b.dataset.sampleBanner='true';b.className='folio-sample-banner';b.setAttribute('role','status');
+ b.innerHTML='<span><strong>Sample data.</strong> You are exploring a demo copy of your business. Nothing here touches your real records.</span><button type="button">Back to my records</button>';b.querySelector('button').addEventListener('click',()=>setSampleMode(false));
+ const header=document.querySelector('body>header')||document.querySelector('header');(header||document.body.firstElementChild).after(b)}
+
+function addGuideButton(){if(document.querySelector('[data-guide-button]'))return;const b=document.createElement('button');b.type='button';b.dataset.guideButton='true';b.className='folio-guide-button';b.innerHTML='<span aria-hidden="true">?</span> Help &amp; demo';b.addEventListener('click',()=>openGuide());document.body.append(b)}
+
+export async function openGuide(){const{showGuide}=await import('/guides.js');showGuide()}
+
 export async function api(path,options={},retried=false){const r=await fetch(path,{...options,headers:{...(options.body instanceof FormData?{}:{'Content-Type':'application/json'}),...options.headers}});const data=await r.json();if(!r.ok){if(r.status===401&&!retried&&path!=='/api/auth'){const refresh=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'refresh'})});if(refresh.ok)return api(path,options,true)}throw Object.assign(Error(data.error||'Request failed'),{status:r.status})}return data}
 export function selectedBusiness(businesses){const explicit=new URLSearchParams(location.search).get('business'),selected=explicit||localStorage.getItem('billing-active-business'),b=businesses.find(b=>b.id===selected)||(!explicit?businesses[0]:null);if(explicit&&!b)throw Error('This business is unavailable to your account.');if(b)localStorage.setItem('billing-active-business',b.id);return b}
-brandHeader();addWorkspaceNav();
+syncSampleParam();brandHeader();addWorkspaceNav();

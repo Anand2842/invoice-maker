@@ -1,0 +1,38 @@
+<!doctype html><html lang="en-IN"><head><meta charset="utf-8"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Getting started — Folio</title><link rel="stylesheet" href="/services.css"><link rel="stylesheet" href="/workspace-shell.css"><link rel="stylesheet" href="/start/start.css"><script type="module" src="/start/start.js"></script></head><body><header><a class="brand" href="/">folio.</a><nav aria-label="Account"><a data-account-link href="/services/?account=login">Log in</a></nav></header>
+<main class="start">
+ <p class="start-eyebrow">Getting started</p>
+ <h1 id="start-title">Set up Folio in a few minutes</h1>
+ <p class="start-lede" id="start-lede">Follow the steps in order. Each one opens the right screen, and you can come back here any time from the menu.</p>
+ <p id="start-status" role="status" aria-live="polite">Loading your account…</p>
+
+ <section id="start-signin" class="start-card" hidden>
+  <h2>Create your free account</h2>
+  <p>Your invoices, clients and books are saved to your account so you can open them on any device.</p>
+  <p class="start-actions"><a class="start-primary" href="/services/?account=login">Sign up or log in</a><a href="/free-online-invoice-generator/?document=invoice">Make one invoice without an account</a></p>
+ </section>
+
+ <section id="start-business" class="start-card" hidden>
+  <h2>1. Tell us about your business</h2>
+  <p>These details print on every invoice. Your GSTIN tells Folio which state you are in, so it can charge the right GST.</p>
+  <form id="business-form" class="start-form">
+   <label>Business name<input name="name" required maxlength="180" autocomplete="organization"></label>
+   <label>GSTIN <span class="start-optional">(leave empty if you are not registered)</span><input name="gstin" maxlength="15" autocapitalize="characters" pattern="[0-9]{2}[A-Za-z0-9]{13}" title="15 characters, starting with your 2-digit state code"><small id="gstin-state" class="start-hint"></small></label>
+   <label class="start-wide">Address<textarea name="address" rows="2" maxlength="2000" autocomplete="street-address"></textarea></label>
+   <label>Phone<input name="phone" maxlength="40" autocomplete="tel"></label>
+   <label>Email for invoices<input name="email" type="email" maxlength="200" autocomplete="email"></label>
+   <label>Invoice number prefix<input name="invoice_prefix" value="INV" maxlength="20" pattern="[A-Za-z0-9]+(-[A-Za-z0-9]+)*" title="Letters and numbers, without a trailing hyphen"><small class="start-hint">Your first invoice will be <span id="prefix-example">INV-000001</span>.</small></label>
+   <div class="start-wide start-actions"><button class="start-primary" type="submit">Save and continue</button></div>
+  </form>
+ </section>
+
+ <div id="start-grid" class="start-grid" hidden>
+  <section class="start-card"><h2 id="checklist-title">Your first paid invoice</h2><p id="progress-text" class="start-hint"></p><div class="start-bar" aria-hidden="true"><span id="progress-bar"></span></div><ol id="checklist" class="start-list" aria-labelledby="checklist-title"></ol></section>
+  <aside class="start-card start-demo">
+   <h2>Not sure yet? Look around first</h2>
+   <p>One click adds a complete sample business: clients, items, invoices in every state, payments, bills, expenses and books. It is kept separate from your real records, and a yellow bar shows when you are viewing it.</p>
+   <button type="button" id="sample-button" class="start-primary">Explore the sample business</button>
+   <p id="sample-status" role="status" aria-live="polite" class="start-hint"></p>
+   <p class="start-hint">Each page also has a <strong>Help &amp; demo</strong> button in the corner that explains what it is for.</p>
+  </aside>
+ </div>
+</main></body></html>
