@@ -9,7 +9,12 @@ import {randomUUID} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 
 const server=process.env.PGREHEARSAL_URL;
-if(!server||!/^postgres(ql)?:\/\/[^/]*(localhost|127\.0\.0\.1)/.test(server))throw Error('Set PGREHEARSAL_URL to a local throwaway PostgreSQL server (localhost only)');
+// The real host must be loopback: parse the URL (a username of "localhost" is not a host) and refuse any option
+// that could redirect the connection (host/hostaddr/service parameters, multi-host lists, Unix-socket paths).
+function localOnly(value){let u;try{u=new URL(value)}catch{return false}
+ return /^postgres(ql)?:$/.test(u.protocol)&&['localhost','127.0.0.1','[::1]'].includes(u.hostname)&&!u.host.includes(',')&&[...u.searchParams.keys()].every(k=>!/^(host|hostaddr|service|options)$/i.test(k))}
+if(!server||!localOnly(server))throw Error('Set PGREHEARSAL_URL to a local throwaway PostgreSQL server (localhost only)');
+for(const k of ['PGHOST','PGHOSTADDR','PGSERVICE'])if(process.env[k]&&!['localhost','127.0.0.1','::1'].includes(process.env[k]))throw Error(`Unset ${k}; the rehearsal only connects to localhost`);
 export const connect=(database='postgres',max=1)=>postgres(server.replace(/\/[^/@]*$/,'')+'/'+database,{onnotice:()=>{},max});
 const dir=new URL('../supabase/migrations/',import.meta.url);
 const migrations=(await readdir(dir)).filter(f=>f.endsWith('.sql')).sort();
@@ -42,7 +47,7 @@ const readFileSyncCache=new Map();for(const f of migrations)readFileSyncCache.se
 
 // Structural security audit against the real catalog. Intended anonymous entry points, each gated inside SQL by a share
 // token, the automation secret, a payment-link token or the webhook HMAC. Any other anon-executable definer is a finding.
-export const ANON_ENTRY_POINTS=['billing_open_share','billing_automation_due','billing_automation_generate','billing_email_claim','billing_email_complete','billing_payment_link_open','billing_gateway_mock_capture','billing_gateway_webhook'];
+export const ANON_ENTRY_POINTS=['billing_open_share','billing_automation_due','billing_automation_generate','billing_automation_failed','billing_email_claim','billing_email_complete','billing_payment_link_open','billing_gateway_mock_capture','billing_gateway_webhook'];
 export async function audit(sql){
  const problems=[];
  for(const r of await sql`select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity`)problems.push(`table without RLS: ${r.relname}`);

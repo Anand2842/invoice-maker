@@ -14,6 +14,22 @@ test('TDS bills, dated balances, challans, permissions and retries',async()=>{co
  let pay=await call('billing_vendor_bill_pay',[f.business,false,draft.bill.id,issued.bill.version,randomUUID(),{amount:'100',date:'2026-04-02',accountId:id('1000'),method:'Bank',reference:'',notes:''}]);assert.equal((await call('billing_vendor_bills_read',[f.business,false,'2026-04-02'])).totalDue,'9700.00');await assert.rejects(call('billing_vendor_bill_pay',[f.business,false,draft.bill.id,issued.bill.version,randomUUID(),{amount:'9700.01',date:'2026-04-03',accountId:id('1000'),method:'Bank',reference:'',notes:''}]),/exceeds/);
  await call('billing_vendor_payment_reverse',[f.business,false,draft.bill.id,pay.payment.id,randomUUID(),'2026-04-03','Correction']);assert.equal((await call('billing_vendor_bills_read',[f.business,false,'2026-04-03'])).totalDue,'9800.00');
  const challanKey=randomUUID(),challanData={section:'194C',bsr:'1234567',serial:'12345',date:'2026-04-04',amount:'2000',accountId:id('1000'),allocations:[]};const deposit=await call('billing_tds_challan',[f.business,false,challanKey,challanData]);assert.equal((await call('billing_tds_challan',[f.business,false,challanKey,challanData])).replayed,true);
+ await assert.rejects(call('billing_tds_challan',[f.business,false,randomUUID(),challanData]),/already recorded/,'the same deposited challan cannot be posted twice under a new key');
  const alloc={challanId:deposit.challan.id,date:'2026-04-05',allocations:[{deductionId:read.deductions[0].id,amount:'2000'}]};await call('billing_tds_allocate',[f.business,false,randomUUID(),alloc]);await assert.rejects(call('billing_tds_allocate',[f.business,false,randomUUID(),alloc]),/exceeds/);assert.equal((await call('billing_tds_read',[f.business,false,'2026-04-04'])).deductions[0].allocated,'0');assert.equal((await call('billing_tds_read',[f.business,false,'2026-04-05'])).deductions[0].allocated,'2000.00');
  await assert.rejects(call('billing_ledger_reverse',[f.business,false,randomUUID(),issued.bill.issued_batch,'2026-04-06','Correction']),/Reverse the allocated challan/);await call('billing_ledger_reverse',[f.business,false,randomUUID(),deposit.journal.id,'2026-04-06','Correction']);await call('billing_ledger_reverse',[f.business,false,randomUUID(),issued.bill.issued_batch,'2026-04-07','Correction']);assert.equal((await call('billing_vendor_bills_read',[f.business,false,'2026-04-07'])).totalDue,'0.00');
+ await call('billing_tds_challan',[f.business,false,randomUUID(),challanData]);
  }finally{await f.close()}});
+
+test('194Q deducts only on purchases above the annual threshold from the seller',async()=>{const f=await paymentDatabase();try{
+ const call=(rpc,args,actor=f.owner)=>f.as(actor,async db=>(await db.query('select '+rpc+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') result',args)).rows[0].result);
+ await call('billing_ledger_setup',[f.business,false,'2026-04-01']);
+ const expense=(await f.db.query("select id from billing_ledger_accounts where not demo and code='5000'")).rows[0].id;
+ const vendor=async name=>(await f.as(f.owner,db=>db.query("insert into billing_records(business_id,collection,data,created_by) values($1,'vendors',$2,$3) returning id",[f.business,{name},f.owner]))).rows[0].id;
+ const bill=async(vendorId,number,rate)=>{const d=await call('billing_vendor_bill_save',[f.business,false,randomUUID(),0,{vendorId,number,date:'2026-05-01',dueDate:'2026-05-30',currency:'INR',accountId:expense,items:[{name:'Goods',quantity:'1',rate}],taxAmount:'0',taxReviewed:true,notes:''},randomUUID()]);
+  return call('billing_tds_bill_issue',[f.business,false,d.bill.id,1,randomUUID(),{section:'194Q',pan:'ABCDE1234F'}])};
+ const big=await vendor('Big seller');
+ const first=await bill(big,'Q-1','6000000');assert.equal(first.bill.data.tdsAmount,'1000.00','0.1% of the ₹10 lakh above ₹50 lakh, not of ₹60 lakh');assert.equal(first.bill.data.netPayable,'5999000.00');
+ const second=await bill(big,'Q-2','1000000');assert.equal(second.bill.data.tdsAmount,'1000.00','the whole later bill is above the threshold');
+ await assert.rejects(bill(await vendor('Small seller'),'Q-3','1000000'),/do not exceed the 194Q threshold/);
+ const read=await call('billing_tds_read',[f.business,false,'2026-05-01']);assert.deepEqual(read.deductions.map(d=>d.base),['1000000.00','1000000.00']);
+}finally{await f.close()}});

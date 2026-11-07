@@ -106,7 +106,7 @@ begin
     distance=coalesce((request->>'transDistance')::integer,0);vehicle=upper(coalesce(request->>'vehicleNo',''));mode=request->>'vehicleType';
     if distance not between 1 and 4000 or coalesce(request->>'transMode','') not in ('1','2','3','4') or mode not in ('R','O') or vehicle !~ '^([A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{4}|TR[A-Z0-9/-]{4,18})$' then raise exception 'Enter valid transport details and vehicle';end if;
     if coalesce(request->>'transporterId','')<>'' and upper(request->>'transporterId') !~ '^(0[1-9]|[12][0-9]|3[0-8]|96|97)[A-Z0-9]{13}$' then raise exception 'Invalid transporter ID';end if;
-    days=ceil(distance::numeric/case when mode='O' then 20 else 200 end);now_local=now() at time zone tz;expiry=((now_local::date+days)::timestamp - interval '1 second') at time zone tz;
+    days=ceil(distance::numeric/case when mode='O' then 20 else 200 end);now_local=now() at time zone tz;expiry=((now_local::date+days+1)::timestamp - interval '1 second') at time zone tz;
     select count(*)+1 into seq from public.billing_compliance_records r where r.business_id=business and r.demo=data_mode and r.kind='ewb';
     response=jsonb_build_object('ewayBillNo',lpad(seq::text,12,'0'),'ewayBillDate',now(),'validUpto',expiry,'simulated',true);
    end if;

@@ -52,13 +52,16 @@ test('email dispatch leases rows, retries failures and gives up after five attem
  for(let i=0;i<3;i++)await f.db.query("insert into billing_email_outbox(business_id,kind,dedupe_key,recipient,subject,body) values($1,'reminder',$2,'a@example.test','S','B')",[f.business,'k'+i]);
  const first=await f.anon('billing_email_claim',[SECRET,2]);assert.equal(first.length,2);
  assert.equal((await f.anon('billing_email_claim',[SECRET,10])).length,1,'leased rows are not claimed twice');
- assert.deepEqual(await f.anon('billing_email_complete',[SECRET,[{id:first[0].id,ok:true,providerId:'mock-1'},{id:first[1].id,ok:false,error:'Timeout'}]]),{sent:1,retrying:1,failed:0});
+ assert.deepEqual(await f.anon('billing_email_complete',[SECRET,[{id:first[0].id,attempt:1,ok:true,providerId:'mock-1'},{id:first[1].id,attempt:1,ok:false,error:'Timeout'}]]),{sent:1,retrying:1,failed:0});
  assert.equal((await f.anon('billing_email_claim',[SECRET,10])).length,0,'a failed row waits for its backoff');
  await f.db.query("update billing_email_outbox set attempts=4,retry_at=now()-interval '1 second' where id=$1",[first[1].id]);
  const again=await f.anon('billing_email_claim',[SECRET,10]);assert.deepEqual(again.map(x=>x.id),[first[1].id]);
- assert.deepEqual(await f.anon('billing_email_complete',[SECRET,[{id:first[1].id,ok:false,error:'Bounced'}]]),{sent:0,retrying:0,failed:1});
+ assert.deepEqual(await f.anon('billing_email_complete',[SECRET,[{id:first[1].id,attempt:5,ok:false,error:'Bounced'}]]),{sent:0,retrying:0,failed:1});
  await f.db.query("update billing_email_outbox set claimed_at=now()-interval '20 minutes' where status='sending'");
- assert.equal((await f.anon('billing_email_claim',[SECRET,10])).length,1,'an expired lease is reclaimed');
+ const stale=(await f.db.query("select id from billing_email_outbox where status='sending'")).rows[0].id;
+ const reclaimed=await f.anon('billing_email_claim',[SECRET,10]);assert.deepEqual(reclaimed.map(x=>[x.id,x.attempt]),[[stale,2]],'an expired lease is reclaimed as a new attempt');
+ assert.deepEqual(await f.anon('billing_email_complete',[SECRET,[{id:stale,attempt:1,ok:false,error:'Late failure from the expired worker'}]]),{sent:0,retrying:0,failed:0},'an expired lease cannot overwrite the newer one');
+ await assert.rejects(f.anon('billing_email_complete',[SECRET,[{id:stale,ok:true}]]),/Malformed/,'the lease attempt is required');
  const status=(await f.outbox()).map(r=>r.status).sort();assert.deepEqual(status,['failed','sending','sent']);
  await assert.rejects(f.anon('billing_email_claim',['x'.repeat(40),1]),/secret rejected/);
 }finally{await f.close()}});
@@ -104,8 +107,8 @@ test('real-provider webhooks need the business HMAC, deduplicate payment ids and
  const read=await f.call('billing_automation_read',[f.business,false]);assert.equal(read.gateway.secretHint,'…rrrr');assert.ok(!JSON.stringify(read).includes(secret));
  const stored=(await f.db.query('select request::text r from billing_automation_commands')).rows.map(r=>r.r).join();assert.ok(!stored.includes(secret),'command history never stores the raw secret');
  const invoice=await f.invoice(),link=await f.call('billing_payment_link_create',[f.business,false,randomUUID(),invoice.id]);
- await assert.rejects(f.anon('billing_gateway_mock_capture',[link.token]),/unavailable/);
- const linkId=(await f.db.query('select id from billing_payment_links where document_id=$1',[invoice.id])).rows[0].id;
+ assert.equal(link.token,undefined,'a real link has no Folio checkout token');assert.equal(link.provider,'razorpay');
+ const linkId=(await f.db.query('select id from billing_payment_links where document_id=$1',[invoice.id])).rows[0].id;assert.equal(link.reference,linkId);
  const event=(id,paise,extra={})=>JSON.stringify({event:'payment_link.paid',payload:{payment_link:{entity:{id:'plink_x',reference_id:linkId}},payment:{entity:{id,amount:paise,currency:'INR',status:'captured',...extra}}}});
  const sign=body=>createHmac('sha256',secret).update(body).digest('hex');
  const part=event('pay_part0001',4000);
@@ -120,4 +123,52 @@ test('real-provider webhooks need the business HMAC, deduplicate payment ids and
  const events=(await f.call('billing_automation_read',[f.business,false])).events.map(e=>e.status).sort();assert.deepEqual(events,['needs-review','needs-review','recorded','recorded']);
  assert.equal((await f.db.query("select sum(amount)::text s from billing_payment_events where document_id=$1 and kind='receipt'",[invoice.id])).rows[0].s,'100.00');
  const ignored=JSON.stringify({event:'payment.failed',payload:{payment_link:{entity:{reference_id:linkId}}}});assert.equal((await f.anon('billing_gateway_webhook',[ignored,sign(ignored)])).ignored,true);
+}finally{await f.close()}});
+
+test('gateway retries are idempotent, real links are INR only and a failed posting is kept for review',async()=>{const f=await fixture();try{
+ const secret='whsec_'+'q'.repeat(30),key=randomUUID(),cfg={provider:'razorpay',webhookSecret:secret,enabled:true};
+ const first=await f.call('billing_gateway_configure',[f.business,false,key,cfg]);assert.equal(first.replayed,false);
+ assert.equal((await f.call('billing_gateway_configure',[f.business,false,key,cfg])).replayed,true,'the identical command replays');
+ await assert.rejects(f.call('billing_gateway_configure',[f.business,false,key,{...cfg,webhookSecret:'whsec_'+'z'.repeat(30)}]),/different automation command/);
+ const usd=await f.invoice({currency:'USD'});await assert.rejects(f.call('billing_payment_link_create',[f.business,false,randomUUID(),usd.id]),/INR invoices only/);
+ const invoice=await f.invoice();await f.call('billing_payment_link_create',[f.business,false,randomUUID(),invoice.id]);
+ const linkId=(await f.db.query('select id from billing_payment_links where document_id=$1',[invoice.id])).rows[0].id;
+ // A capture whose posting fails (simulated closed period) is preserved as needs-review, dated on the capture day.
+ await f.db.exec("create function test_closed_period() returns trigger language plpgsql as $$begin raise exception 'Posting date is outside the open ledger period';end$$;create trigger test_closed_period before insert on billing_payment_events for each row execute function test_closed_period()");
+ const body=JSON.stringify({event:'payment_link.paid',payload:{payment_link:{entity:{reference_id:linkId}},payment:{entity:{id:'pay_closed001',amount:10000,currency:'INR',status:'captured',created_at:Math.floor(Date.parse('2026-10-05T06:00:00Z')/1000)}}}});
+ const r=await f.anon('billing_gateway_webhook',[body,createHmac('sha256',secret).update(body).digest('hex')]);
+ assert.equal(r.recorded,false);assert.equal(r.needsReview,true);assert.match(r.detail,/Receipt dated 2026-10-05 could not be posted/);
+ assert.equal((await f.db.query("select count(*)::int n from billing_gateway_events where provider_payment_id='pay_closed001' and status='needs-review'")).rows[0].n,1);
+ assert.equal((await f.db.query("select count(*)::int n from billing_payment_events where document_id=$1",[invoice.id])).rows[0].n,0);
+}finally{await f.close()}});
+
+test('reminders use what is due today and are re-checked when delivered',async()=>{const f=await fixture();try{
+ await f.configure({reminderDays:[1]});const buyer={name:'B',email:'buyer@example.test'};
+ const future=await f.invoice({buyer});await f.record(future,{amount:'100.00',date:'2026-12-01'});
+ const later=await f.invoice({buyer}),part=await f.invoice({buyer});
+ assert.equal((await f.anon('billing_automation_due',[SECRET,'2026-10-22T06:00:00Z'])).remindersQueued,3,'a future-dated receipt does not settle what is due today');
+ await f.record(later,{amount:'100.00',date:'2026-10-21'});
+ await f.record(part,{amount:'30.00',date:'2026-10-21'});
+ const claimed=await f.anon('billing_email_claim',[SECRET,10]);
+ assert.deepEqual(claimed.map(c=>c.message.match(/INR (\S+) remains/)[1]).sort(),['100.00','70.00'],'the paid reminder is cancelled and the part-paid one re-worded');
+ assert.equal((await f.db.query("select status from billing_email_outbox where document_id=$1",[later.id])).rows[0].status,'cancelled');
+ await f.configure({remindersEnabled:false});await f.db.query("update billing_email_outbox set status='queued',claimed_at=null where status='sending'");
+ assert.equal((await f.anon('billing_email_claim',[SECRET,10])).length,0,'turning reminders off cancels queued ones');
+}finally{await f.close()}});
+
+test('failing subscriptions back off and cannot starve other businesses',async()=>{const f=await fixture();try{
+ await f.configure({recurringEnabled:true,remindersEnabled:false});
+ const other=randomUUID(),otherOwner=randomUUID();await f.db.query('insert into auth.users(id) values($1)',[otherOwner]);
+ await f.db.query("insert into billing_businesses(id,owner_id,name) values($1,$2,'Other business')",[other,otherOwner]);
+ await f.db.query("insert into billing_automation_settings(business_id,recurring_enabled,updated_by) values($1,true,$2)",[other,otherOwner]);
+ for(let i=0;i<30;i++)await f.db.query("insert into billing_records(business_id,collection,data,created_by) values($1,'subscriptions',$2,$3)",[f.business,{name:'Broken '+i,status:'Active',frequency:'Never',nextDate:'2026-01-01'},f.owner]);
+ const good=(await f.db.query("insert into billing_records(business_id,collection,data,created_by) values($1,'subscriptions',$2,$3) returning id",[other,{name:'Fine',status:'Active',frequency:'Monthly',amount:10,nextDate:'2026-11-01'},otherOwner])).rows[0].id;
+ let due=(await f.anon('billing_automation_due',[SECRET,'2026-11-05T06:00:00Z'])).subscriptions;
+ assert.equal(due.filter(d=>d.business.id===f.business).length,25,'at most 25 per business per run');assert.ok(due.some(d=>d.record.id===good),'the other business is still served');
+ const broken=due.find(d=>d.business.id===f.business).record.id;
+ assert.equal((await f.anon('billing_automation_failed',[SECRET,broken,'Invalid frequency'])).attempts,1);
+ due=(await f.anon('billing_automation_due',[SECRET,new Date(Date.now()+3600e3).toISOString()])).subscriptions;assert.ok(!due.some(d=>d.record.id===broken),'a failed subscription waits for its backoff');
+ assert.equal((await f.anon('billing_automation_failed',[SECRET,broken,'Invalid frequency'])).attempts,2);
+ assert.deepEqual((await f.call('billing_automation_read',[f.business,false])).generationFailures.map(x=>[x.name,x.attempts,x.error]),[[(await f.db.query("select data->>'name' n from billing_records where id=$1",[broken])).rows[0].n,2,'Invalid frequency']]);
+ await assert.rejects(f.anon('billing_automation_failed',['x'.repeat(40),broken,'x']),/secret rejected/);
 }finally{await f.close()}});

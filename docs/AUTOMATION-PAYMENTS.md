@@ -37,15 +37,23 @@ Automation never touches demo records.
 * The simulated checkout signs a Razorpay-shaped event with the stored secret and sends it through the same
   verification path.
 * **Real Razorpay checkout creation is not wired.** Creating hosted payment links through the Razorpay API needs
-  a key id and secret on the server. Until those exist, real-mode links show the amount, and the business sends
-  its own Razorpay link with `reference_id` set to the Folio link id. The webhook path is complete.
+  a key id and secret on the server. Until those exist, creating a real-mode link returns a Reference ID (the Folio
+  link id) instead of a Folio pay URL. The business creates the payment link in Razorpay with that Reference ID
+  and sends it; the webhook records the payment. Real links are INR only, because Razorpay reports amounts in the
+  currency's minor unit.
+* Receipts are dated on the provider's capture day in the business time zone. If posting fails (for example the
+  ledger period is closed), the verified event is still kept as `needs-review` with the reason.
+* Reminders are re-checked when they are sent: cancelled if reminders were turned off or the invoice is settled,
+  and re-worded if a part payment changed the balance. Outstanding amounts ignore future-dated receipts.
+* A subscription that fails to generate backs off (1, 2, 3… up to 7 days) and is listed on the automation page,
+  and each run takes at most 25 subscriptions per business so one business cannot hold the whole batch.
 
 ## Security model
 
 There is no service-role key. Machine calls use only the publishable key and are authorised inside SQL:
 
-* Cron RPCs (`billing_automation_due`, `billing_automation_generate`, `billing_email_claim`,
-  `billing_email_complete`) require the automation secret. Its SHA-256 is in `billing_system_secrets`, a table
+* Cron RPCs (`billing_automation_due`, `billing_automation_generate`, `billing_automation_failed`,
+  `billing_email_claim`, `billing_email_complete`) require the automation secret. Its SHA-256 is in `billing_system_secrets`, a table
   with RLS on, no policies and no grants.
 * Webhooks require the business HMAC secret.
 * After verification, work runs as the business owner for the rest of that transaction

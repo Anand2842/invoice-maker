@@ -40,7 +40,7 @@ begin
 end$$;
 
 create function public.billing_tds_bill_issue(business uuid,data_mode boolean,bill_id uuid,expected_version integer,command_id uuid,tds_data jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
-declare b public.billing_vendor_bills;v public.billing_records;prior public.billing_tds_commands;req jsonb;result jsonb;journal jsonb;entries jsonb;code_value text;pan_value text;deductee text;day date;rate_value numeric;threshold_value numeric;threshold_kind_value text;base numeric;tax numeric;gross numeric;deduction numeric;aggregate_value numeric;warning boolean;payable uuid;tax_account uuid;tds_account uuid;fy date;
+declare b public.billing_vendor_bills;v public.billing_records;prior public.billing_tds_commands;req jsonb;result jsonb;journal jsonb;entries jsonb;code_value text;pan_value text;deductee text;day date;rate_value numeric;threshold_value numeric;threshold_kind_value text;base numeric;tax numeric;gross numeric;deduction numeric;aggregate_value numeric;warning boolean;tds_base numeric;prior_purchases numeric;payable uuid;tax_account uuid;tds_account uuid;fy date;
 begin
  if auth.uid() is null or not public.billing_can_access(business,true) then raise exception using errcode='42501',message='You cannot issue vendor bills';end if;
  perform public.billing_ledger_writer_lock(business,false);
@@ -64,10 +64,18 @@ begin
  select s.rate,s.threshold,s.threshold_kind into rate_value,threshold_value,threshold_kind_value from public.billing_tds_sections s where s.business_id=business and s.demo=data_mode and s.code=code_value and s.effective_date<=day order by s.effective_date desc limit 1;
  if not found then select d.rate,d.threshold,d.threshold_kind into rate_value,threshold_value,threshold_kind_value from public.billing_tds_defaults() d where d.code=code_value;end if;
  if pan_value='' then rate_value=greatest(rate_value,case when code_value='194Q' then 5 else 20 end);end if;
- base=(b.data->>'subtotal')::numeric;tax=(b.data->>'taxAmount')::numeric;gross=base+tax;deduction=round(base*rate_value/100,2);if deduction<=0 or deduction>=gross then raise exception 'TDS must be positive and less than the bill total';end if;
+ base=(b.data->>'subtotal')::numeric;tax=(b.data->>'taxAmount')::numeric;gross=base+tax;tds_base=base;
  fy=make_date(extract(year from day)::int-case when extract(month from day)<4 then 1 else 0 end,4,1);
+ -- Section 194Q applies only to the part of this financial year's purchases from the seller above the threshold, so earlier
+ -- issued, unreversed bills from the same vendor count toward it whether or not TDS was deducted on them.
+ if code_value='194Q' then
+  select coalesce(sum((x.data->>'subtotal')::numeric),0) into prior_purchases from public.billing_vendor_bills x where x.business_id=business and x.demo=data_mode and x.vendor_id=b.vendor_id and x.status='issued' and x.id<>b.id and (x.data->>'date')::date>=fy and (x.data->>'date')::date<=day and not exists(select 1 from public.billing_ledger_batches r where r.reverses_id=x.issued_batch and r.date<=day);
+  tds_base=least(base,greatest(prior_purchases+base-threshold_value,0));
+  if tds_base<=0 then raise exception 'Purchases from this seller this financial year do not exceed the 194Q threshold yet; issue this bill without TDS';end if;
+ end if;
+ deduction=round(tds_base*rate_value/100,2);if deduction<=0 or deduction>=gross then raise exception 'TDS must be positive and less than the bill total';end if;
  select coalesce(sum(d.base),0) into aggregate_value from public.billing_tds_deductions d join public.billing_vendor_bills x on x.id=d.bill_id where d.business_id=business and d.demo=data_mode and x.vendor_id=b.vendor_id and split_part(d.section,'-',1)=split_part(code_value,'-',1) and d.date>=fy and d.date<=day and not exists(select 1 from public.billing_ledger_batches r where r.reverses_id=d.batch_id and r.date<=day);
- warning=case when code_value like '194C-%' then base<=threshold_value and aggregate_value+base<=100000 when threshold_kind_value='none' then false when threshold_kind_value='single' then base<=threshold_value when threshold_kind_value='annual' then aggregate_value+base<=threshold_value when threshold_kind_value='monthly' then base<=threshold_value else false end;
+ warning=case when code_value like '194C-%' then base<=threshold_value and aggregate_value+base<=100000 when code_value='194Q' then false when threshold_kind_value='none' then false when threshold_kind_value='single' then base<=threshold_value when threshold_kind_value='annual' then aggregate_value+base<=threshold_value when threshold_kind_value='monthly' then base<=threshold_value else false end;
  select id into payable from public.billing_ledger_accounts where business_id=business and demo=data_mode and code='2000' and type='liability';select id into tax_account from public.billing_ledger_accounts where business_id=business and demo=data_mode and code='1300' and type='asset';
  if payable is null or tax_account is null or not exists(select 1 from public.billing_ledger_accounts where id=(b.data->>'accountId')::uuid and business_id=business and demo=data_mode and (type='expense' or (type='asset' and code not in ('1000','1100','1300','1400','1450')))) then raise exception 'Bill posting accounts unavailable';end if;
  insert into public.billing_ledger_accounts(business_id,demo,code,name,type) values(business,data_mode,'TDS-'||split_part(code_value,'-',1),'TDS payable – '||split_part(code_value,'-',1),'liability') on conflict (business_id,demo,code) do nothing;
@@ -77,7 +85,7 @@ begin
  b.data=b.data||jsonb_build_object('netPayable',(gross-deduction)::text,'tdsAmount',deduction::text,'tdsSection',code_value,'vendor',jsonb_build_object('id',v.id,'name',v.data->>'name','address',v.data->>'address','email',v.data->>'email','phone',v.data->>'phone','gstin',v.data->>'gstin'));
  journal=public.billing_ledger_commit(business,data_mode,command_id,req,jsonb_build_object('date',day,'description','Vendor bill '||(b.data->>'number'),'kind','manual','entries',entries));
  update public.billing_vendor_bills set status='issued',issued_batch=(journal->'batch'->>'id')::uuid,data=b.data,version=version+1,updated_at=now() where id=b.id returning * into b;
- insert into public.billing_tds_deductions(business_id,demo,bill_id,section,pan,deductee_type,base,rate,amount,date,threshold_warning,batch_id) values(business,data_mode,b.id,code_value,pan_value,deductee,base,rate_value,deduction,day,warning,b.issued_batch);
+ insert into public.billing_tds_deductions(business_id,demo,bill_id,section,pan,deductee_type,base,rate,amount,date,threshold_warning,batch_id) values(business,data_mode,b.id,code_value,pan_value,deductee,tds_base,rate_value,deduction,day,warning,b.issued_batch);
  result=jsonb_build_object('bill',to_jsonb(b),'journal',journal->'batch','thresholdWarning',warning,'rate',rate_value::text,'replayed',false);insert into public.billing_tds_commands values(business,data_mode,command_id,auth.uid(),req,result);return result;
 end$$;
 
@@ -93,6 +101,8 @@ begin
  section_value=challan_data->>'section';day=public.billing_payment_date(challan_data->'date');amount=public.billing_ledger_amount(challan_data->'amount');interest=public.billing_ledger_amount(coalesce(challan_data->'interest','"0"'::jsonb));fee=public.billing_ledger_amount(coalesce(challan_data->'lateFee','"0"'::jsonb));
  if section_value not in ('194C','194J','194H','194I','194Q','194A') or coalesce(challan_data->>'bsr','')!~'^[0-9]{7}$' or coalesce(challan_data->>'serial','')!~'^[0-9]{5}$' or amount<=0 or jsonb_typeof(challan_data->'allocations') is distinct from 'array' or jsonb_array_length(challan_data->'allocations')>500 then raise exception 'Enter a section, 7-digit BSR, 5-digit challan serial and positive amount';end if;
  if coalesce(challan_data->>'accountId','')!~'^[0-9a-fA-F-]{36}$' then raise exception 'Choose a bank account';end if;
+ -- One live record per deposited challan (BSR, deposit date, serial); a corrected entry requires reversing the earlier one.
+ if exists(select 1 from public.billing_tds_challans c where c.business_id=business and c.demo=data_mode and c.bsr=challan_data->>'bsr' and c.serial=challan_data->>'serial' and c.date=day and not exists(select 1 from public.billing_ledger_batches r where r.reverses_id=c.batch_id)) then raise exception using errcode='23505',message='This challan (BSR, date and serial) is already recorded; reverse it before recording a correction';end if;
  select id into cash from public.billing_ledger_accounts where id=(challan_data->>'accountId')::uuid and business_id=business and demo=data_mode and code='1000' and type='asset';select id into liability from public.billing_ledger_accounts where business_id=business and demo=data_mode and code='TDS-'||section_value and type='liability';select id into expense from public.billing_ledger_accounts where business_id=business and demo=data_mode and code='5000' and type='expense';
  if cash is null or liability is null or expense is null then raise exception 'Required bank, TDS liability or expense account is unavailable';end if;
  for item in select value from jsonb_array_elements(challan_data->'allocations') loop

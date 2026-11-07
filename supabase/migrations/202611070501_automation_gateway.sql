@@ -8,22 +8,25 @@
 
 create table public.billing_system_secrets(name text primary key check(name='automation'),secret_hash bytea not null check(length(secret_hash)=32),created_at timestamptz not null default now());
 create table public.billing_automation_settings(business_id uuid primary key references public.billing_businesses(id),recurring_enabled boolean not null default false,reminders_enabled boolean not null default false,reminder_days integer[] not null default '{1,7,14}',updated_by uuid not null references auth.users(id),updated_at timestamptz not null default now(),check(cardinality(reminder_days) between 1 and 6));
-create table public.billing_email_outbox(id uuid primary key default gen_random_uuid(),business_id uuid not null references public.billing_businesses(id),kind text not null check(kind in('reminder','recurring-summary')),dedupe_key text not null unique,document_id uuid,recipient text not null,subject text not null,body text not null,status text not null default 'queued' check(status in('queued','sending','sent','failed')),attempts integer not null default 0,claimed_at timestamptz,retry_at timestamptz,provider_id text,last_error text,created_at timestamptz not null default now(),sent_at timestamptz);
+create table public.billing_email_outbox(id uuid primary key default gen_random_uuid(),business_id uuid not null references public.billing_businesses(id),kind text not null check(kind in('reminder','recurring-summary')),dedupe_key text not null unique,document_id uuid,recipient text not null,subject text not null,body text not null,status text not null default 'queued' check(status in('queued','sending','sent','failed','cancelled')),attempts integer not null default 0,claimed_at timestamptz,retry_at timestamptz,provider_id text,last_error text,created_at timestamptz not null default now(),sent_at timestamptz);
 create index email_outbox_queue on public.billing_email_outbox(status,created_at);
 create table public.billing_automation_commands(business_id uuid not null references public.billing_businesses(id),demo boolean not null,command_id uuid not null,actor_id uuid not null references auth.users(id),request jsonb not null,result jsonb not null,created_at timestamptz not null default now(),primary key(business_id,demo,command_id));
+-- Failed recurring generation backs off per subscription so one business's broken subscriptions cannot hold the batch.
+create table public.billing_automation_failures(source_id uuid primary key references public.billing_records(id),business_id uuid not null references public.billing_businesses(id),attempts integer not null,retry_at timestamptz not null,last_error text not null,updated_at timestamptz not null default now());
 create table public.billing_gateway_settings(business_id uuid not null references public.billing_businesses(id),demo boolean not null,provider text not null check(provider in('mock','razorpay')),webhook_secret text not null check(length(webhook_secret) between 16 and 200),enabled boolean not null,updated_by uuid not null references auth.users(id),updated_at timestamptz not null default now(),primary key(business_id,demo),check(provider<>'mock' or demo));
 create table public.billing_payment_links(id uuid primary key default gen_random_uuid(),business_id uuid not null references public.billing_businesses(id),demo boolean not null,document_id uuid not null references public.billing_records(id),token_hash bytea not null unique,amount numeric(18,2) not null check(amount>0),currency text not null,status text not null default 'open' check(status in('open','paid','cancelled')),created_by uuid not null references auth.users(id),created_at timestamptz not null default now());
 create unique index payment_link_one_open on public.billing_payment_links(document_id) where status='open';
 create table public.billing_gateway_events(id uuid primary key default gen_random_uuid(),business_id uuid not null references public.billing_businesses(id),demo boolean not null,link_id uuid not null references public.billing_payment_links(id),provider text not null,provider_payment_id text not null,amount numeric(18,2),currency text,status text not null check(status in('recorded','needs-review')),payment_record_id uuid,detail text not null default '',payload jsonb not null,received_at timestamptz not null default now(),unique(provider,provider_payment_id));
 
-DO $$declare t text;begin foreach t in array array['billing_system_secrets','billing_automation_settings','billing_email_outbox','billing_automation_commands','billing_gateway_settings','billing_payment_links','billing_gateway_events'] loop
+DO $$declare t text;begin foreach t in array array['billing_system_secrets','billing_automation_settings','billing_email_outbox','billing_automation_commands','billing_automation_failures','billing_gateway_settings','billing_payment_links','billing_gateway_events'] loop
  execute format('alter table public.%I enable row level security',t);execute format('revoke all on table public.%I from public,anon,authenticated',t);end loop;end$$;
 -- Members read automation state, outbox delivery and links; secrets and command results stay definer-only.
 create policy automation_settings_read on public.billing_automation_settings for select to authenticated using(public.billing_can_access(business_id));
 create policy email_outbox_read on public.billing_email_outbox for select to authenticated using(public.billing_can_access(business_id));
+create policy automation_failures_read on public.billing_automation_failures for select to authenticated using(public.billing_can_access(business_id));
 create policy payment_links_read on public.billing_payment_links for select to authenticated using(public.billing_can_access(business_id));
 create policy gateway_events_read on public.billing_gateway_events for select to authenticated using(public.billing_can_access(business_id));
-grant select on public.billing_automation_settings,public.billing_email_outbox,public.billing_payment_links,public.billing_gateway_events to authenticated;
+grant select on public.billing_automation_settings,public.billing_automation_failures,public.billing_email_outbox,public.billing_payment_links,public.billing_gateway_events to authenticated;
 
 create function public.billing_automation_secret_ok(secret text) returns boolean language sql stable security definer set search_path='' as $$
  select coalesce(length(secret) between 32 and 256 and exists(select 1 from public.billing_system_secrets s where s.name='automation' and s.secret_hash=sha256(convert_to(secret,'UTF8'))),false)
@@ -35,16 +38,21 @@ create function public.billing_act_as_owner(business uuid) returns void language
 declare owner uuid;begin select owner_id into owner from public.billing_businesses where id=business;if owner is null then raise exception 'Business unavailable';end if;perform set_config('request.jwt.claim.sub',owner::text,true);end$$;
 create function public.billing_end_owner_context() returns void language sql security definer set search_path='' as $$select set_config('request.jwt.claim.sub','',true)$$;
 
--- Remaining customer obligation: issued documents use the dated settlement movements; legacy records use their own totals.
-create function public.billing_invoice_outstanding(doc uuid) returns numeric language plpgsql stable security definer set search_path='' as $$
+-- Remaining customer obligation on a business-local date: issued documents use the dated settlement movements; legacy
+-- records use their own totals. Future-dated receipts do not reduce what is due today.
+create function public.billing_invoice_outstanding(doc uuid,as_of date) returns numeric language plpgsql stable security definer set search_path='' as $$
 declare total numeric;moved numeric;
 begin
- select coalesce(sum(m.delta),0) into moved from public.billing_settlement_movements(doc,'incoming') m;
+ select coalesce(sum(m.delta),0) into moved from public.billing_settlement_movements(doc,'incoming') m where m.date<=as_of;
  if exists(select 1 from public.billing_issued_documents where document_id=doc) then return moved;end if;
  select (public.billing_document_totals(r.data)->'totals'->>'total')::numeric into total from public.billing_records r where r.id=doc and r.collection='documents';
  return coalesce(total,0)+moved;
 end$$;
 create function public.billing_money_text(n numeric) returns text language sql immutable set search_path='' as $$select to_char(n,'FM999999999990.00')$$;
+create function public.billing_business_today(business uuid) returns date language sql stable security definer set search_path='' as $$select (now() at time zone time_zone)::date from public.billing_businesses where id=business$$;
+create function public.billing_reminder_body(doc jsonb,owing numeric,business_name text) returns text language sql immutable set search_path='' as $$
+ select 'Hello '||coalesce(nullif(doc->'buyer'->>'name',''),'there')||','||chr(10)||chr(10)||'Invoice '||(doc->>'number')||' dated '||(doc->>'date')||' was due on '||(doc->>'dueDate')||'. '||coalesce(doc->>'currency','')||' '||public.billing_money_text(owing)||' remains unpaid.'||chr(10)||chr(10)||'If you have already paid, please ignore this reminder.'||chr(10)||chr(10)||business_name
+$$;
 
 create function public.billing_automation_configure(business uuid,command_id uuid,settings jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
 declare prior public.billing_automation_commands;request jsonb;days integer[];result jsonb;
@@ -75,8 +83,9 @@ begin
   'automation',jsonb_build_object('recurringEnabled',coalesce(s.recurring_enabled,false),'remindersEnabled',coalesce(s.reminders_enabled,false),'reminderDays',to_jsonb(coalesce(s.reminder_days,'{1,7,14}'::integer[])),'updatedAt',s.updated_at),
   'gateway',case when g.business_id is null then null else jsonb_build_object('provider',g.provider,'enabled',g.enabled,'secretHint','…'||right(g.webhook_secret,4),'simulated',g.provider='mock') end,
   'outbox',coalesce((select jsonb_agg(jsonb_build_object('id',o.id,'kind',o.kind,'documentId',o.document_id,'recipient',o.recipient,'subject',o.subject,'status',o.status,'attempts',o.attempts,'error',o.last_error,'createdAt',o.created_at,'sentAt',o.sent_at) order by o.created_at desc) from(select * from public.billing_email_outbox where business_id=business order by created_at desc limit 50)o),'[]'),
+  'generationFailures',coalesce((select jsonb_agg(jsonb_build_object('subscriptionId',x.source_id,'name',r.data->>'name','attempts',x.attempts,'retryAt',x.retry_at,'error',x.last_error) order by x.updated_at desc) from public.billing_automation_failures x join public.billing_records r on r.id=x.source_id where x.business_id=business),'[]'),
   'links',coalesce((select jsonb_agg(jsonb_build_object('id',l.id,'documentId',l.document_id,'number',r.data->>'number','amount',public.billing_money_text(l.amount),'currency',l.currency,'status',l.status,'createdAt',l.created_at) order by l.created_at desc) from(select * from public.billing_payment_links where business_id=business and demo=data_mode order by created_at desc limit 50)l join public.billing_records r on r.id=l.document_id),'[]'),
-  'openInvoices',coalesce((select jsonb_agg(jsonb_build_object('id',i.id,'number',i.data->>'number','buyer',i.data->'buyer'->>'name','dueDate',i.data->>'dueDate','currency',i.data->>'currency','outstanding',public.billing_money_text(i.owing)) order by i.data->>'date' desc,i.id) from(select r.id,r.data,public.billing_invoice_outstanding(r.id) owing from public.billing_records r where r.business_id=business and r.demo=data_mode and r.collection='documents' and not r.archived and r.data->>'type' in('invoice','gst-invoice','commercial-invoice') and r.data->>'status'='sent' order by r.data->>'date' desc limit 100)i where i.owing>0),'[]'),
+  'openInvoices',coalesce((select jsonb_agg(jsonb_build_object('id',i.id,'number',i.data->>'number','buyer',i.data->'buyer'->>'name','dueDate',i.data->>'dueDate','currency',i.data->>'currency','outstanding',public.billing_money_text(i.owing)) order by i.data->>'date' desc,i.id) from(select r.id,r.data,public.billing_invoice_outstanding(r.id,public.billing_business_today(business)) owing from public.billing_records r where r.business_id=business and r.demo=data_mode and r.collection='documents' and not r.archived and r.data->>'type' in('invoice','gst-invoice','commercial-invoice') and r.data->>'status'='sent' order by r.data->>'date' desc limit 100)i where i.owing>0),'[]'),
   'events',coalesce((select jsonb_agg(jsonb_build_object('id',e.id,'linkId',e.link_id,'provider',e.provider,'paymentId',e.provider_payment_id,'amount',public.billing_money_text(e.amount),'currency',e.currency,'status',e.status,'detail',e.detail,'receivedAt',e.received_at) order by e.received_at desc) from(select * from public.billing_gateway_events where business_id=business and demo=data_mode order by received_at desc limit 50)e),'[]'));
 end$$;
 
@@ -92,17 +101,19 @@ begin
    begin due=(inv.data->>'dueDate')::date;exception when others then continue;end;
    select max(d) into step from unnest(b.reminder_days) d where today-due>=d;
    if step is null then continue;end if;
-   owing=public.billing_invoice_outstanding(inv.id);if owing<=0 then continue;end if;
+   owing=public.billing_invoice_outstanding(inv.id,today);if owing<=0 then continue;end if;
    insert into public.billing_email_outbox(business_id,kind,dedupe_key,document_id,recipient,subject,body)
    values(b.business_id,'reminder','reminder:'||inv.id||':'||step,inv.id,inv.data->'buyer'->>'email','Payment reminder: '||(inv.data->>'number')||' from '||b.name,
-    'Hello '||coalesce(nullif(inv.data->'buyer'->>'name',''),'there')||','||chr(10)||chr(10)||'Invoice '||(inv.data->>'number')||' dated '||(inv.data->>'date')||' was due on '||due||'. '||coalesce(inv.data->>'currency','')||' '||public.billing_money_text(owing)||' remains unpaid.'||chr(10)||chr(10)||'If you have already paid, please ignore this reminder.'||chr(10)||chr(10)||b.name)
+    public.billing_reminder_body(inv.data,owing,b.name))
    on conflict(dedupe_key) do nothing;
    get diagnostics n=row_count;queued=queued+n;
   end loop;
  end loop;
- select coalesce(jsonb_agg(jsonb_build_object('record',to_jsonb(r),'business',jsonb_build_object('id',bb.id,'name',bb.name,'currency',bb.currency,'time_zone',bb.time_zone))),'[]') into subs
- from(select r.* from public.billing_records r join public.billing_automation_settings s on s.business_id=r.business_id and s.recurring_enabled join public.billing_businesses bb on bb.id=r.business_id
-  where r.collection='subscriptions' and not r.demo and not r.archived and r.data->>'status'='Active' and coalesce(r.data->>'nextDate','')~'^\d{4}-\d{2}-\d{2}$' and r.data->>'nextDate'<=((at at time zone bb.time_zone)::date)::text order by r.data->>'nextDate',r.id limit 200)r
+ select coalesce(jsonb_agg(jsonb_build_object('record',to_jsonb(r)-'turn','business',jsonb_build_object('id',bb.id,'name',bb.name,'currency',bb.currency,'time_zone',bb.time_zone))),'[]') into subs
+ -- At most 25 per business per run, interleaved across businesses, skipping subscriptions still backing off after a failure.
+ from(select * from(select r.*,row_number() over(partition by r.business_id order by r.data->>'nextDate',r.id) turn from public.billing_records r join public.billing_automation_settings s on s.business_id=r.business_id and s.recurring_enabled join public.billing_businesses bb on bb.id=r.business_id
+  where r.collection='subscriptions' and not r.demo and not r.archived and r.data->>'status'='Active' and coalesce(r.data->>'nextDate','')~'^\d{4}-\d{2}-\d{2}$' and r.data->>'nextDate'<=((at at time zone bb.time_zone)::date)::text
+   and not exists(select 1 from public.billing_automation_failures x where x.source_id=r.id and x.retry_at>at))q where turn<=25 order by turn,q.data->>'nextDate',q.id limit 200)r
  join public.billing_businesses bb on bb.id=r.business_id;
  return jsonb_build_object('remindersQueued',queued,'subscriptions',subs);
 end$$;
@@ -123,7 +134,20 @@ begin
   on conflict(dedupe_key) do nothing;
  end if;
  perform public.billing_end_owner_context();
+ delete from public.billing_automation_failures where billing_automation_failures.source_id=billing_automation_generate.source_id;
  return jsonb_build_object('document',to_jsonb(doc),'sourceVersion',(select version from public.billing_records where id=source_id),'nextDate',next_date);
+end$$;
+
+-- Records a failed generation; the subscription is retried after 1, 2, 3... days (at most 7) and shown to the owner.
+create function public.billing_automation_failed(secret text,source_id uuid,error text) returns jsonb language plpgsql security definer set search_path='' as $$
+declare source public.billing_records;f public.billing_automation_failures;
+begin
+ perform public.billing_require_automation(secret);
+ select * into source from public.billing_records where id=source_id and collection='subscriptions' and not demo;
+ if source.id is null then raise exception using errcode='P0002',message='Subscription unavailable';end if;
+ insert into public.billing_automation_failures as x(source_id,business_id,attempts,retry_at,last_error) values(source_id,source.business_id,1,now()+interval '1 day',left(coalesce(error,'Generation failed'),500))
+  on conflict on constraint billing_automation_failures_pkey do update set attempts=x.attempts+1,retry_at=now()+least(x.attempts+1,7)*interval '1 day',last_error=excluded.last_error,updated_at=now() returning * into f;
+ return jsonb_build_object('attempts',f.attempts,'retryAt',f.retry_at);
 end$$;
 
 -- Leased claim so a crashed sender's rows are retried after 15 minutes; failures back off 15 minutes per attempt and are marked failed after five.
@@ -132,6 +156,15 @@ declare out jsonb;
 begin
  perform public.billing_require_automation(secret);
  if max_items is null or max_items not between 1 and 100 then raise exception 'Claim between 1 and 100 emails';end if;
+ -- Reminders are re-checked at delivery: cancelled once reminders are off or the invoice is settled, closed or archived,
+ -- and re-worded when a part payment changed the balance since queueing.
+ update public.billing_email_outbox o set status='cancelled',last_error='No longer due when delivery was attempted' from public.billing_records r
+  where o.kind='reminder' and o.status='queued' and r.id=o.document_id and (r.archived or r.data->>'status' is distinct from 'sent'
+   or not exists(select 1 from public.billing_automation_settings s where s.business_id=o.business_id and s.reminders_enabled)
+   or public.billing_invoice_outstanding(r.id,public.billing_business_today(o.business_id))<=0);
+ update public.billing_email_outbox o set body=public.billing_reminder_body(r.data,public.billing_invoice_outstanding(r.id,public.billing_business_today(o.business_id)),b.name)
+  from public.billing_records r,public.billing_businesses b where o.kind='reminder' and o.status='queued' and r.id=o.document_id and b.id=o.business_id
+   and o.body is distinct from public.billing_reminder_body(r.data,public.billing_invoice_outstanding(r.id,public.billing_business_today(o.business_id)),b.name);
  with picked as(select id from public.billing_email_outbox where status='queued' and (retry_at is null or retry_at<=now()) or status='sending' and claimed_at<now()-interval '15 minutes' order by created_at limit max_items for update skip locked),
  claimed as(update public.billing_email_outbox o set status='sending',claimed_at=now(),attempts=attempts+1 from picked where o.id=picked.id returning o.*)
  select coalesce(jsonb_agg(jsonb_build_object('id',c.id,'to',c.recipient,'subject',c.subject,'message',c.body,'attempt',c.attempts) order by c.created_at),'[]') into out from claimed c;
@@ -143,8 +176,9 @@ begin
  perform public.billing_require_automation(secret);
  if jsonb_typeof(results) is distinct from 'array' or jsonb_array_length(results)>100 then raise exception 'Report up to 100 delivery results';end if;
  for r in select value from jsonb_array_elements(results) loop
-  if coalesce(r->>'id','')!~'^[0-9a-f-]{36}$' or jsonb_typeof(r->'ok') is distinct from 'boolean' then raise exception 'Malformed delivery result';end if;
-  select * into item from public.billing_email_outbox where id=(r->>'id')::uuid and status='sending' for update;
+  if coalesce(r->>'id','')!~'^[0-9a-f-]{36}$' or jsonb_typeof(r->'ok') is distinct from 'boolean' or coalesce(r->>'attempt','')!~'^\d{1,4}$' then raise exception 'Malformed delivery result';end if;
+  -- The attempt number is the lease: a sender whose lease expired and was re-claimed cannot overwrite the newer attempt.
+  select * into item from public.billing_email_outbox where id=(r->>'id')::uuid and status='sending' and attempts=(r->>'attempt')::integer for update;
   if item.id is null then continue;end if;
   if (r->>'ok')::boolean then update public.billing_email_outbox set status='sent',sent_at=now(),provider_id=left(r->>'providerId',200),last_error=null where id=item.id;sent=sent+1;
   elsif item.attempts>=5 then update public.billing_email_outbox set status='failed',last_error=left(coalesce(r->>'error','Delivery failed'),500) where id=item.id;failed=failed+1;
@@ -172,15 +206,15 @@ begin
  if provider not in('mock','razorpay') then raise exception 'Choose the simulated gateway or Razorpay';end if;
  if provider='razorpay' and (jsonb_typeof(gateway->'webhookSecret') is distinct from 'string' or length(gateway->>'webhookSecret') not between 16 and 200) then raise exception 'Enter the Razorpay webhook secret (16-200 characters)';end if;
  perform public.billing_ledger_writer_lock(business,true);
- request=jsonb_build_object('action','gateway','data',gateway);
+ -- The stored request omits the raw secret so command history never repeats it; retries compare the same normalized form.
+ request=jsonb_build_object('action','gateway','data',gateway-'webhookSecret','secretHash',encode(sha256(convert_to(coalesce(gateway->>'webhookSecret',''),'UTF8')),'hex'));
  select * into prior from public.billing_automation_commands c where c.business_id=business and c.demo=data_mode and c.command_id=billing_gateway_configure.command_id;
  if prior.command_id is not null then if prior.actor_id<>auth.uid() or prior.request<>request then raise exception using errcode='40001',message='This retry key was used for a different automation command';end if;return prior.result||'{"replayed":true}';end if;
  secret=case when provider='mock' then encode(sha256(convert_to(gen_random_uuid()::text||gen_random_uuid()::text,'UTF8')),'hex') else gateway->>'webhookSecret' end;
  insert into public.billing_gateway_settings as g(business_id,demo,provider,webhook_secret,enabled,updated_by) values(business,data_mode,provider,secret,(gateway->>'enabled')::boolean,auth.uid())
   on conflict(business_id,demo) do update set provider=excluded.provider,webhook_secret=excluded.webhook_secret,enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=now();
  result=jsonb_build_object('provider',provider,'enabled',(gateway->>'enabled')::boolean,'secretHint','…'||right(secret,4),'simulated',provider='mock','replayed',false);
- -- The stored request omits the raw secret so command history never repeats it.
- insert into public.billing_automation_commands values(business,data_mode,command_id,auth.uid(),request-'data'||jsonb_build_object('data',gateway-'webhookSecret','secretHash',encode(sha256(convert_to(coalesce(gateway->>'webhookSecret',''),'UTF8')),'hex')),result);
+ insert into public.billing_automation_commands values(business,data_mode,command_id,auth.uid(),request,result);
  return result;
 end$$;
 
@@ -197,11 +231,14 @@ begin
  if g.business_id is null or not g.enabled then raise exception 'Enable online payments for this data mode first';end if;
  select * into src from public.billing_records where id=invoice_id and business_id=business and demo=data_mode and collection='documents' and not archived for update;
  if src.id is null or src.data->>'type' not in('invoice','gst-invoice','commercial-invoice') or src.data->>'status' is distinct from 'sent' then raise exception using errcode='P0002',message='Choose an issued, unpaid invoice in this business and data mode';end if;
- owing=public.billing_invoice_outstanding(invoice_id);if owing<=0 then raise exception 'This invoice has no balance to collect';end if;
+ -- Razorpay amounts arrive in paise; other currencies use different minor units, so real links are INR only.
+ if g.provider='razorpay' and src.data->>'currency' is distinct from 'INR' then raise exception 'Razorpay payment links support INR invoices only';end if;
+ owing=public.billing_invoice_outstanding(invoice_id,public.billing_business_today(business));if owing<=0 then raise exception 'This invoice has no balance to collect';end if;
  update public.billing_payment_links set status='cancelled' where document_id=invoice_id and status='open';
  token=replace(gen_random_uuid()::text||gen_random_uuid()::text,'-','');
  insert into public.billing_payment_links(business_id,demo,document_id,token_hash,amount,currency,created_by) values(business,data_mode,invoice_id,sha256(convert_to(token,'UTF8')),owing,src.data->>'currency',auth.uid()) returning id into link;
- result=jsonb_build_object('linkId',link,'token',token,'amount',public.billing_money_text(owing),'currency',src.data->>'currency','simulated',g.provider='mock','replayed',false);
+ -- Simulated links pay on Folio's page; a Razorpay payment link is created in Razorpay with this link id as its Reference ID.
+ result=jsonb_build_object('linkId',link,'reference',link,'amount',public.billing_money_text(owing),'currency',src.data->>'currency','provider',g.provider,'simulated',g.provider='mock','replayed',false)||case when g.provider='mock' then jsonb_build_object('token',token) else '{}'::jsonb end;
  insert into public.billing_automation_commands values(business,data_mode,command_id,auth.uid(),request,result);return result;
 end$$;
 
@@ -214,13 +251,13 @@ begin
  if l.id is null then raise exception using errcode='P0002',message='Payment link unavailable';end if;
  select * into r from public.billing_records where id=l.document_id;select * into g from public.billing_gateway_settings where business_id=l.business_id and demo=l.demo;
  return jsonb_build_object('status',case when l.status='open' and not coalesce(g.enabled,false) then 'unavailable' else l.status end,'number',r.data->>'number','date',r.data->>'date','dueDate',r.data->>'dueDate','currency',l.currency,
-  'amount',public.billing_money_text(case when l.status='open' then greatest(public.billing_invoice_outstanding(l.document_id),0) else l.amount end),'seller',coalesce(r.data->'seller'->>'name',''),'buyer',coalesce(r.data->'buyer'->>'name',''),
+  'amount',public.billing_money_text(case when l.status='open' then greatest(public.billing_invoice_outstanding(l.document_id,public.billing_business_today(l.business_id)),0) else l.amount end),'seller',coalesce(r.data->'seller'->>'name',''),'buyer',coalesce(r.data->'buyer'->>'name',''),
   'business',(select name from public.billing_businesses where id=l.business_id),'provider',g.provider,'simulated',coalesce(g.provider='mock',false));
 end$$;
 
 -- Verified gateway event -> receipt through billing_record_payment, deduplicated by provider payment id.
 create function public.billing_gateway_process(body text,signature text) returns jsonb language plpgsql security definer set search_path='' as $$
-declare payload jsonb;ref text;l public.billing_payment_links;g public.billing_gateway_settings;src public.billing_records;pay jsonb;pid text;amount numeric;owing numeric;note text;receipt jsonb;day date;
+declare payload jsonb;ref text;l public.billing_payment_links;g public.billing_gateway_settings;src public.billing_records;pay jsonb;pid text;amount numeric;owing numeric;note text;receipt jsonb;day date;tz text;
 begin
  if body is null or length(body)>200000 or coalesce(signature,'')!~'^[0-9a-fA-F]{64}$' then raise exception using errcode='28000',message='Webhook signature missing or malformed';end if;
  begin payload=body::jsonb;exception when others then raise exception using errcode='22P02',message='Webhook body is not JSON';end;
@@ -235,11 +272,16 @@ begin
  if coalesce(pid,'')!~'^[A-Za-z0-9_]{6,64}$' or jsonb_typeof(pay->'amount') is distinct from 'number' or (pay->>'amount')!~'^\d{1,15}$' then raise exception using errcode='22023',message='Webhook payment details are malformed';end if;
  if exists(select 1 from public.billing_gateway_events where provider=g.provider and provider_payment_id=pid) then return jsonb_build_object('duplicate',true,'paymentId',pid);end if;
  perform public.billing_act_as_owner(l.business_id);perform public.billing_ledger_writer_lock(l.business_id,false);
- amount=(pay->>'amount')::numeric/100;owing=public.billing_invoice_outstanding(l.document_id);
+ -- The receipt is dated on the provider's capture day (business-local), not the day a retried webhook arrives.
+ select time_zone into tz from public.billing_businesses where id=l.business_id;
+ day=case when coalesce(pay->>'created_at','')~'^\d{9,11}$' then (to_timestamp((pay->>'created_at')::bigint) at time zone tz)::date else (now() at time zone tz)::date end;
  select * into src from public.billing_records where id=l.document_id for update;
+ if day<(src.data->>'date')::date then day=(src.data->>'date')::date;end if;
+ amount=(pay->>'amount')::numeric/100;owing=public.billing_invoice_outstanding(l.document_id,day);
  note=case when not g.enabled then 'Online payments were disabled when this payment arrived'
   when pay->>'status' is distinct from 'captured' then 'Payment is not captured'
   when upper(coalesce(pay->>'currency',''))<>l.currency then 'Payment currency differs from the invoice'
+  when g.provider='razorpay' and l.currency<>'INR' then 'Only INR payments can be recorded automatically'
   when l.status<>'open' then 'Payment link was '||l.status||' when this payment arrived'
   when src.data->>'status' is distinct from 'sent' then 'Invoice is no longer open for payment'
   when amount<=0 or amount>owing then 'Payment amount exceeds the invoice balance' end;
@@ -248,12 +290,19 @@ begin
   perform public.billing_end_owner_context();
   return jsonb_build_object('recorded',false,'needsReview',true,'detail',note,'paymentId',pid);
  end if;
- day=(now() at time zone (select time_zone from public.billing_businesses where id=l.business_id))::date;
- if day<(src.data->>'date')::date then day=(src.data->>'date')::date;end if;
- receipt=public.billing_record_payment(l.business_id,l.document_id,src.version,md5('gateway:'||g.provider||':'||pid)::uuid,jsonb_build_object('amount',public.billing_money_text(amount),'date',day::text,'method',case when g.provider='mock' then 'Mock gateway (simulated)' else 'Online - Razorpay' end,'reference',pid),l.demo);
+ -- Money has been collected either way: if posting fails (for example the period is closed) keep the verified event for review.
+ begin
+  receipt=public.billing_record_payment(l.business_id,l.document_id,src.version,md5('gateway:'||g.provider||':'||pid)::uuid,jsonb_build_object('amount',public.billing_money_text(amount),'date',day::text,'method',case when g.provider='mock' then 'Mock gateway (simulated)' else 'Online - Razorpay' end,'reference',pid),l.demo);
+ exception when others then
+  note=left('Receipt dated '||day||' could not be posted: '||sqlerrm,500);
+ end;
  perform public.billing_end_owner_context();
+ if note is not null then
+  insert into public.billing_gateway_events(business_id,demo,link_id,provider,provider_payment_id,amount,currency,status,detail,payload) values(l.business_id,l.demo,l.id,g.provider,pid,amount,l.currency,'needs-review',note,payload);
+  return jsonb_build_object('recorded',false,'needsReview',true,'detail',note,'paymentId',pid);
+ end if;
  insert into public.billing_gateway_events(business_id,demo,link_id,provider,provider_payment_id,amount,currency,status,payment_record_id,payload) values(l.business_id,l.demo,l.id,g.provider,pid,amount,l.currency,'recorded',(receipt->'record'->>'id')::uuid,payload);
- if public.billing_invoice_outstanding(l.document_id)<=0 then update public.billing_payment_links set status='paid' where id=l.id;end if;
+ if public.billing_invoice_outstanding(l.document_id,'infinity')<=0 then update public.billing_payment_links set status='paid' where id=l.id;end if;
  return jsonb_build_object('recorded',true,'paymentId',pid,'amount',public.billing_money_text(amount),'receiptId',receipt->'record'->>'id');
 end$$;
 create function public.billing_gateway_webhook(body text,signature text) returns jsonb language sql security definer set search_path='' as $$select public.billing_gateway_process(body,signature)$$;
@@ -266,13 +315,13 @@ begin
  select * into g from public.billing_gateway_settings where business_id=l.business_id and demo=l.demo;
  if l.id is null or g.provider is distinct from 'mock' or not l.demo then raise exception using errcode='P0002',message='Simulated checkout is unavailable for this link';end if;
  if l.status<>'open' or not g.enabled then raise exception 'This payment link is no longer open';end if;
- owing=public.billing_invoice_outstanding(l.document_id);
+ owing=public.billing_invoice_outstanding(l.document_id,public.billing_business_today(l.business_id));
  body=jsonb_build_object('event','payment_link.paid','payload',jsonb_build_object('payment_link',jsonb_build_object('entity',jsonb_build_object('id','plink_mock_'||left(replace(l.id::text,'-',''),14),'reference_id',l.id)),
   'payment',jsonb_build_object('entity',jsonb_build_object('id','pay_mock_'||left(md5(l.id::text||clock_timestamp()::text),14),'amount',(owing*100)::bigint,'currency',l.currency,'status','captured','method','simulated'))),'simulated',true)::text;
  return public.billing_gateway_process(body,encode(public.billing_hmac_sha256(convert_to(g.webhook_secret,'UTF8'),convert_to(body,'UTF8')),'hex'))||jsonb_build_object('simulated',true);
 end$$;
 
-DO $$declare fn regprocedure;begin for fn in select p.oid::regprocedure from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in('billing_automation_secret_ok','billing_require_automation','billing_act_as_owner','billing_end_owner_context','billing_invoice_outstanding','billing_money_text','billing_automation_configure','billing_automation_read','billing_automation_due','billing_automation_generate','billing_email_claim','billing_email_complete','billing_hmac_sha256','billing_gateway_configure','billing_payment_link_create','billing_payment_link_open','billing_gateway_process','billing_gateway_webhook','billing_gateway_mock_capture') loop execute format('revoke all on function %s from public,anon,authenticated',fn);end loop;end$$;
+DO $$declare fn regprocedure;begin for fn in select p.oid::regprocedure from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in('billing_automation_secret_ok','billing_require_automation','billing_automation_failed','billing_business_today','billing_reminder_body','billing_act_as_owner','billing_end_owner_context','billing_invoice_outstanding','billing_money_text','billing_automation_configure','billing_automation_read','billing_automation_due','billing_automation_generate','billing_email_claim','billing_email_complete','billing_hmac_sha256','billing_gateway_configure','billing_payment_link_create','billing_payment_link_open','billing_gateway_process','billing_gateway_webhook','billing_gateway_mock_capture') loop execute format('revoke all on function %s from public,anon,authenticated',fn);end loop;end$$;
 grant execute on function public.billing_automation_configure(uuid,uuid,jsonb),public.billing_automation_read(uuid,boolean),public.billing_gateway_configure(uuid,boolean,uuid,jsonb),public.billing_payment_link_create(uuid,boolean,uuid,uuid) to authenticated;
 -- Secret- or signature-gated machine entry points and the public link view are callable with only the publishable key.
-grant execute on function public.billing_automation_due(text,timestamptz),public.billing_automation_generate(text,uuid,integer,jsonb,date),public.billing_email_claim(text,integer),public.billing_email_complete(text,jsonb),public.billing_payment_link_open(text),public.billing_gateway_webhook(text,text),public.billing_gateway_mock_capture(text) to anon,authenticated;
+grant execute on function public.billing_automation_due(text,timestamptz),public.billing_automation_generate(text,uuid,integer,jsonb,date),public.billing_automation_failed(text,uuid,text),public.billing_email_claim(text,integer),public.billing_email_complete(text,jsonb),public.billing_payment_link_open(text),public.billing_gateway_webhook(text,text),public.billing_gateway_mock_capture(text) to anon,authenticated;

@@ -22,7 +22,10 @@ q('#import-form').addEventListener('submit',async e=>{e.preventDefault();if(busy
  try{pending=await request(false);render(pending);status('Review the preview, then import.')}catch(error){status(error.message,true);signIn(error)}finally{busy=false}});
 q('#import-form').addEventListener('change',()=>{q('#result').hidden=true;pending=null});
 q('#commit').addEventListener('click',async()=>{if(busy||!pending)return;busy=true;q('#commit').disabled=true;status('Importing…');
- try{const r=await request(true);q('#result').hidden=true;pending=null;q('#import-form').elements.file.value='';status(`Imported ${r.imported} record${r.imported===1?'':'s'}.`+(r.errors.length+r.duplicates.length?` ${r.errors.length+r.duplicates.length} row(s) skipped.`:''))}
+ try{const r=await request(true);
+  // 207: some chunks were saved and the rest rejected. Keep the file so the user can retry; saved names are skipped then.
+  if(r.error){q('#result').hidden=true;pending=null;status(r.error,true);return}
+  q('#result').hidden=true;pending=null;q('#import-form').elements.file.value='';status(`Imported ${r.imported} record${r.imported===1?'':'s'}.`+(r.errors.length+r.duplicates.length?` ${r.errors.length+r.duplicates.length} row(s) skipped.`:''))}
  catch(error){status(error.message,true);signIn(error);q('#commit').disabled=false}finally{busy=false}});
 (async()=>{try{const w=await api('/api/workspace'),businesses=w.businesses;if(!businesses.length){status('Create a business first.');return}
  q('#business').replaceChildren(...businesses.map(b=>Object.assign(node('option',b.name),{value:b.id})));q('#business').value=selectedBusiness(businesses).id;
