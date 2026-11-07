@@ -4,8 +4,8 @@ Migration `202611070501_automation_gateway.sql`, API `lib/automation-api.mjs`, p
 
 ## What runs
 
-A daily Vercel Cron (`/api/cron/automation`, 03:30 UTC = 09:00 IST, defined in `vercel.json` and written to
-`.vercel/output/config.json` by `scripts/build-vercel.mjs`) does three things in order:
+A daily Vercel Cron (`/api/cron/automation`, 03:30 UTC = 09:00 IST, defined only in `vercel.json`; declaring it
+again in the build output makes Vercel reject the deploy as a duplicate) does three things in order:
 
 1. **Payment reminders.** For each business where the owner turned reminders on, every issued (`sent`) real
    invoice with a buyer email and an unpaid balance gets at most one reminder per configured offset (days after

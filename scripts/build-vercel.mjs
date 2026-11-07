@@ -158,9 +158,6 @@ const config = {
   ],
 };
 
-// Daily automation tick (reminders, recurring drafts, email outbox). Hobby plans allow one run per day; 03:30 UTC is 09:00 IST.
-config.crons = [{ path: "/api/cron/automation", schedule: "30 3 * * *" }];
-
 writeFileSync(resolve(outputDir, "config.json"), JSON.stringify(config, null, 2));
 console.log("==> Vercel build complete in .vercel/output");
 
