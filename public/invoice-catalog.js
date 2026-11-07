@@ -2,7 +2,7 @@ export async function chooseCatalogRecord({business,collection,demo,onSelect}) {
   const dialog=document.createElement('dialog');dialog.className='invoice-catalog';
   const kind=collection==='items'?'item':collection==='vendors'?'vendor':'client';
   dialog.setAttribute('aria-label','Choose saved '+kind);
-  dialog.innerHTML='<header><h2>Choose saved '+kind+'</h2><button type="button" data-close aria-label="Close catalog">Close</button></header><label>Search '+kind+'<input type="search" data-search placeholder="Search by name"></label><label class="catalog-demo"><input type="checkbox" data-demo> Show demo records</label><p role="status"></p><div data-results></div>';
+  dialog.innerHTML='<header><h2>Choose saved '+kind+'</h2><button type="button" data-close aria-label="Close catalog">Close</button></header><label>Search '+kind+'<input type="search" data-search placeholder="Search by name"></label><label class="catalog-demo"><input type="checkbox" data-demo> Show sample records</label><p role="status"></p><div data-results></div>';
   const search=dialog.querySelector('[data-search]'),demoToggle=dialog.querySelector('[data-demo]'),results=dialog.querySelector('[data-results]'),status=dialog.querySelector('[role=status]');
   demoToggle.checked=demo;let records=[],generation=0;
   function render(){results.replaceChildren();const found=records.filter(r=>String(r.data.name||'').toLowerCase().includes(search.value.toLowerCase()));

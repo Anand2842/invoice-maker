@@ -123,15 +123,15 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
   content.replaceChildren();
   const current = response.invoice?.data || {};
   heading.textContent = 'Payments · ' + (current.number || 'Invoice');
-  intro.textContent = (dataMode ? 'Demo data · ' : '') + 'Recorded payments and corrections for this invoice. Recording a payment does not collect money.';
+  intro.textContent = (dataMode ? 'Sample data · ' : '') + 'Recorded payments and corrections for this invoice. Recording a payment does not collect money.';
   const settlement=response.settlement;
   if(settlement){
-   const summary=el('section',null,'fp-notice');summary.append(el('h3','Dated invoice settlement'),el('p','Through '+settlement.asOf+' · balance '+current.currency+' '+(settlement.balance===null?'Not available for this document yet':cashMoney(settlement.balance))+' · direct receipt capacity '+current.currency+' '+cashMoney(settlement.recordableAmount)));
-   summary.append(el('p','Direct receipts, credit/debit notes, cash allocations/releases and customer credit refunds are included once. Unapplied cash stays outside invoice balances. Capacity also protects later recorded settlements; record excess money as an explicit cash advance.','fp-muted'));
-   const cash=el('a','Open cash / advances');cash.href='/cash/?'+new URLSearchParams({business:businessId,demo:String(dataMode),date:settlement.asOf});summary.append(cash);
+   const summary=el('section',null,'fp-notice');summary.append(el('h3','Still to collect'),el('p',(settlement.balance===null?'Balance not available for this document yet':current.currency+' '+cashMoney(settlement.balance)+' as of '+settlement.asOf)+(settlement.balance!==null&&settlement.recordableAmount!==settlement.balance?' · you can record up to '+current.currency+' '+cashMoney(settlement.recordableAmount)+' now':'')));
+   summary.append(el('p','This counts payments, credit and debit notes, advances applied to this invoice and refunds. If the client paid more than the balance, record the extra as an advance.','fp-muted'));
+   const cash=el('a','Open advances & unapplied cash');cash.href='/cash/?'+new URLSearchParams({business:businessId,demo:String(dataMode),date:settlement.asOf});summary.append(cash);
    if(settlement.inheritedCurrencyWarnings)summary.append(el('p',settlement.inheritedCurrencyWarnings+' retained payment record(s) have no currency; the linked invoice currency is inherited for review. No record was backfilled.','fp-muted'));
    if(settlement.snapshotKind==='legacy-current')summary.append(el('p','This invoice was created before issuing was tracked. Lock it, then add it to your books, so payments and reports include it.','fp-muted'));
-   if(settlement.paymentsTruncated||settlement.allocationsTruncated||settlement.refundsTruncated)summary.append(el('p','History below shows the latest 1,000 events of each kind. The dated balance/capacity includes every scoped event.','fp-muted'));
+   if(settlement.paymentsTruncated||settlement.allocationsTruncated||settlement.refundsTruncated)summary.append(el('p','The history below shows the latest 1,000 entries of each kind. The balance above includes all of them.','fp-muted'));
    content.append(summary);
   }
   const writable = response.available && response.canWrite && issuedTypes.has(current.type) && ['sent', 'paid'].includes(current.status)&&settlement?.issued===true;
@@ -208,7 +208,7 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
   const form = el('form', null, 'fp-form');
   const title = el('h3', original ? 'Reverse payment record' : 'Record payment'); form.append(title);
   if (original) form.append(el('p', 'Reverse the full ' + amount(original.data, response.invoice.data.currency) + ' recorded on ' + (original.data.date || 'an earlier date') + '. This corrects the record; it does not send a cash refund.', 'fp-muted'));
-  else form.append(el('p', 'Enter money already received. Partial payments and customer credits remain visible in dated balances.', 'fp-muted'));
+  else form.append(el('p', 'Enter money you have already received. You can record part payments; the balance updates straight away.', 'fp-muted'));
   const fields = el('div', null, 'fp-fields'); form.append(fields);
   function field(name, label, options = {}) {
    const wrap = el('div', null, 'fp-field' + (options.wide ? ' fp-wide' : ''));
@@ -234,7 +234,7 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
   }
   const actions = el('div', null, 'fp-actions'), save = el('button', original ? 'Confirm reversal' : 'Record payment', 'fp-primary'); save.type = 'submit'; actions.append(save);
   let dateContext=response.settlement,dateRequest=0;const balanceHint=el('p','','fp-muted');
-  function showCapacity(){if(original)return;balanceHint.textContent=dateContext?'Through '+dateContext.asOf+' · invoice balance '+response.invoice.data.currency+' '+(dateContext.balance===null?'unavailable':cashMoney(dateContext.balance))+' · maximum new direct receipt '+cashMoney(dateContext.recordableAmount):'Settlement capacity unavailable. Refresh before recording.';save.disabled=!dateContext||!dateContext.issued||dateContext.canWrite!==true||cashMinor(dateContext.recordableAmount)===0n}
+  function showCapacity(){if(original)return;balanceHint.textContent=dateContext?'Through '+dateContext.asOf+' · invoice balance '+response.invoice.data.currency+' '+(dateContext.balance===null?'unavailable':cashMoney(dateContext.balance))+' · you can record up to '+cashMoney(dateContext.recordableAmount):'The balance could not be checked. Refresh the page before recording.';save.disabled=!dateContext||!dateContext.issued||dateContext.canWrite!==true||cashMinor(dateContext.recordableAmount)===0n}
   if(!original){form.append(balanceHint);showCapacity();dateInput.onchange=async()=>{const request=++dateRequest,day=dateInput.value;dateContext=null;showCapacity();setBusy(true);try{const r=await api('/api/payments?'+query({settlement:'true',date:day}));if(closed||request!==dateRequest)return;if(r.settlement?.asOf!==day)throw Error('Dated settlement confirmation was incomplete');dateContext=r.settlement;showCapacity()}catch(error){if(request===dateRequest){balanceHint.textContent=error.message;save.disabled=true}}finally{if(request===dateRequest)setBusy(false)}}}
 
   if (original) actions.append(button('Cancel reversal', () => {renderForm();}));
@@ -245,7 +245,7 @@ export async function openPayments({business, invoice, demo = false, timeZone, o
    if (amountInput && (!/^\d+(\.\d{1,2})?$/.test(amountInput.value) || Number(amountInput.value) <= 0 || Number(amountInput.value) > 1e10)) {
     amountInput.setCustomValidity('Enter a positive amount with up to two decimal places.'); amountInput.reportValidity(); return;
    }
-   if(amountInput&&(!dateContext||dateContext.asOf!==dateInput.value||cashMinor(amountInput.value)>cashMinor(dateContext.recordableAmount))){amountInput.setCustomValidity('This amount exceeds the direct receipt capacity at the chosen date. Review cash / advances for unapplied money.');amountInput.reportValidity();return;}
+   if(amountInput&&(!dateContext||dateContext.asOf!==dateInput.value||cashMinor(amountInput.value)>cashMinor(dateContext.recordableAmount))){amountInput.setCustomValidity('This is more than the invoice balance on that date. Record the extra as an advance under Advances & unapplied cash.');amountInput.reportValidity();return;}
    const values = new FormData(form);
    const command = original
     ? {action: 'reverse', business: businessId, payment: original.id, demo: dataMode, date: values.get('date'), reason: String(values.get('reason')).trim()}
