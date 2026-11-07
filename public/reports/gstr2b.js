@@ -1,8 +1,9 @@
 import{reportWorkspace,reportError}from'/report-entry.js';
 import{businessDate}from'/business-date.js';
 import{csv}from'/csv.js';
-import{api,selectedBusiness}from'/workspace-shell.js';
+import{api,selectedBusiness,sampleMode}from'/workspace-shell.js';
 const q=s=>document.querySelector(s),el=(tag,value)=>Object.assign(document.createElement(tag),{textContent:String(value??'')});
+if(sampleMode())q('#demo').value='true';
 let result=null,generation=0,busy=false,pending=null,uncertain=false;
 const context=()=>({business:q('#business').value,demo:q('#demo').value==='true'});
 const period=()=>{const value=q('#period').value;return /^\d{4}-(0[1-9]|1[0-2])$/.test(value)?value.slice(5)+value.slice(0,4):''};

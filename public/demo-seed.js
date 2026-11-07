@@ -78,5 +78,13 @@ export async function seedSampleBusiness(business,progress=()=>{}){
   const exp=await post('/api/records',{business,collection:'expenses',demo:true,data:{name:'Office rent',date:daysAgo(6),amount:35000,category:'Rent',vendor:'Prime Properties',reference:'RENT-SAMPLE',taxableAmount:35000,inputCgst:0,inputSgst:0,inputIgst:0,inputCess:0,reverseCharge:'No',itcStatus:'Ineligible',reconciled2B:'No'}});
   try{await post('/api/expenses',{action:'post',business,expense:exp.record.id,command:key(),demo:true,version:exp.record.version,data:{paidConfirmed:true,taxReviewed:true,taxTreatment:'expense-all',expenseAccount:acct('5000'),cashAccount:acct('1000'),taxAccount:null,currency:b.currency||'INR'}})}catch{/* the expense stays as a record if posting rules differ */}
  }
+ // Advances need two extra accounts and a one-time cash setup; do it for the sample books so "record an advance" works straight away.
+ try{
+  progress('Setting up advances…');
+  for(const[code,name,type]of[['2200','Customer advances','liability'],['1400','Vendor advances','asset']])
+   if(!acct(code))try{await post('/api/ledger',{business,demo:true,action:'createAccount',code,name,type})}catch(e){if(!/already|exists|duplicate/i.test(e.message))throw e}
+  const accounts=(await api('/api/ledger?'+new URLSearchParams({business,demo:'true',from:start,to:daysAgo(0)}))).accounts||[],id=code=>accounts.find(a=>a.code===code)?.id;
+  await post('/api/cash',{business,demo:true,action:'setup',command:key(),data:{cutover:daysAgo(0),accounts:{cash:id('1000'),receivable:id('1100'),payable:id('2000'),customerAdvance:id('2200'),vendorAdvance:id('1400')}}});
+ }catch{/* advances can still be set up from Advances & unapplied cash */}
  progress('Sample data is ready.');
 }
