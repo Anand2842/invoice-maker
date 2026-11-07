@@ -3,3 +3,6 @@ body{margin:0;background:#faf9f6;color:#292333;font-family:'Folio Sans',Arial,sa
 
 .document-settings{border-top:1px solid #e5e0e7;margin-top:12px;padding-top:12px}.document-settings>summary{font-weight:600;cursor:pointer}.document-settings>label{display:inline-flex;gap:8px;align-items:center;margin:12px 16px 12px 0;max-width:100%}
 .document-settings select{max-width:100%;min-width:0;text-overflow:ellipsis}.document-settings input:not([type=checkbox]),.document-settings select{font:inherit;padding:7px;border:1px solid #d6cfe3;border-radius:5px}.document-settings>p{margin-bottom:0}
+
+/* A global reset zeroes dialog margins; keep every modal dialog centred. */
+dialog:modal{margin:auto}
