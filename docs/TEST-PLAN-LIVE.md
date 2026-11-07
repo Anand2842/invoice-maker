@@ -139,4 +139,20 @@ Tester: Claude, driving the owner's Chrome. Date: 7 November 2026. Release: `p0-
 | B3.4 | Pass | Saved as INV-000001 in the sample series; "Ten Thousand Rupees Only" |
 | B3.5 | Fail → fixed in `335b728` | Issue worked on the server, but the editor then showed "Lock this older invoice" and a draft message; drafts said "saved before issuing was tracked"; jargon confirmation. All fixed and re-tested locally |
 | B3.8 | Fail → fixed | Guide promised "convert it to an invoice" but there was no button. Added Convert to invoice on saved quotations and proformas; tested locally (lines, client, own number, Net 15, survives reload) |
-
+| B3.9 | Pass | CN-000001 (₹2,500, reason "One hour not delivered") issued against INV-000001; reason box now an empty field with a hint instead of pre-filled text |
+| B3.10 | Pass | Cedar & Co. statement: opening 0, charges 27,920, credits & payments 7,500, closing 20,420; CN-000001 listed; ageing matches. PDF not downloaded (needs permission) |
+| B1.5 | Fail → fixed | Paid invoices showed "Issued". The list now shows Paid, Partly paid, and Overdue with days, using the Money to collect balances |
+| B3.6 | Note → fixed | Payment dialog jargon rewritten: "Still to collect", "you can record up to …" |
+| — | Wording | "Demo records/workspace/data" renamed to "Sample data" on 30 pages; 20 workspace pages had their own header links ("Canonical items and stock", "Legacy item catalog"), now one shared header |
+| B4.1 | Pass, 1 fix | Bills to pay: 2 sample bills, total due ₹47,024. Amounts were shown as "INR 47024.00" with jargon ("cash allocations/releases", "manual AP journals"): reformatted to ₹47,024.00, labels Paid / Partly paid / Overdue, notice rewritten. New bill not created |
+| B4.2 | Pass | SWL-2290 paid in full by bank transfer: balance 5,664 → 0, total due 47,024 → 41,360, journal posted |
+| B5.1 | Fail → fixed | Trial balance balances (₹1,02,024 each side), but sample sales were missing from Books: the sample seed never turned on invoice posting. Seed now does; posting setup and "Add to my books" re-tested live in sample mode: AR 17,700 = sales 15,000 + GST 2,700, still balanced |
+| B5.3 | Pass, 2 fixes | Advances needed a manual setup (two accounts and cash setup) and asked for a pasted party ID. Setup done live in sample mode; ₹5,000 UPI advance from Cedar applied to INV-000001 (7,500 → 2,500). Party is now a name dropdown; sample seed sets advances up; messages in plain words |
+| B5.5 | Fail → fixed | GST returns opened on real records while the Sample data bar showed (GSTR-2B too): now follows sample mode. GSTR-1 correctly excludes all invoices because the business has no GSTIN; issue codes removed and the GSTIN issue links to Settings |
+| B5.8 | Pass, 1 fix | Practice IRN validation runs and refuses (no GSTIN/PIN/address), labelled simulated. Field names like "SellerDtls.Pin" now read "Your business – PIN code" |
+| B5.9 | Pass, 1 note | Payment link for INV-000001 created in sample mode; link page shows ₹2,500 due and "Pay now (simulated)" (not clicked). Reminder settings say they apply to real records, so they were not saved. Pay page date and amount now formatted as 22 Nov 2026 / ₹2,500.00 |
+| B5.10 | Pass | Activity log lists the sample actions newest first (entries read like "ledger cash · allocate") |
+| B5.2, B5.4, B5.6, B5.7 | Pass (load only) | General ledger, Bank matching, TDS, Stock, Sales orders and Leads load in sample mode with no script errors or failed requests; status lines on TDS, Stock, Orders and Leads reworded. No CSV upload, TDS entry or stock movement was made |
+| — | Fix | Opening a saved issued invoice showed "Issue (make final)" for ~10 s while it loaded; buttons now stay hidden until loaded |
+| B6.3 | Pass | No console errors on dashboard, Money to collect and editor; page sweep found no 4xx/5xx |
+| B3.11, B4.3, B4.4, B6.2 | Not run | Share link, expense posting, PO/DC numbering live (PO/DC series covered by the database test), signed-in mobile |
