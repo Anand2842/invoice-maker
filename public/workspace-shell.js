@@ -39,6 +39,8 @@ export function addWorkspaceNav(){
   const d=document.createElement('details');d.open=current||open[group]!==false;const s=document.createElement('summary');s.textContent=group;d.append(s,list);
   d.addEventListener('toggle',()=>{if(current)return;open[group]=d.open;try{localStorage.setItem('folio-nav-open',JSON.stringify(open))}catch{}});nav.append(d)}
  aside.append(nav);
+ // Anyone who can open two or more businesses (an accountant) gets a link to the all-businesses overview.
+ fetch('/api/workspace').then(r=>r.ok?r.json():null).then(d=>{if((d?.businesses?.length||0)<2)return;const first=nav.querySelector('.folio-sidebar-links');if(!first||first.querySelector('[data-all-businesses]'))return;const a=document.createElement('a');a.href='/businesses/';a.textContent='All businesses';a.dataset.allBusinesses='true';if(isCurrent('/businesses/'))a.setAttribute('aria-current','page');first.prepend(a)}).catch(()=>{});
  const help=document.createElement('button');help.type='button';help.className='folio-sidebar-help';help.textContent='How this page works';help.addEventListener('click',()=>openGuide());aside.append(help);
  document.body.prepend(aside);document.documentElement.classList.add('folio-has-sidebar');
  // Phone and tablet: the sidebar becomes a drawer behind a Menu button in the page header.
