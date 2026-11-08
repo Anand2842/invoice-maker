@@ -23,18 +23,20 @@ Success: a user with a real inbill business connects Claude and ChatGPT in under
 - One HTTP endpoint on our own domain, for example `https://<domain>/mcp`, using the MCP **Streamable HTTP** transport, **stateless** (no server-side session; Vercel functions are short-lived). Use the official TypeScript SDK (`@modelcontextprotocol/sdk`) or Vercel's `mcp-handler`; pick whichever works with this app's runtime.
 - **Spike first (half a day):** this app builds with `vinext` (a Vite-based Next-compatible runtime), not stock Next. Prove an MCP route handler runs both locally and on a Vercel preview before committing to a design. If it does not, run the MCP server as a separate small Vercel function that calls the same `lib/` modules.
 - Route files stay thin, like the existing API: `app/mcp/route.ts` calls `lib/mcp-server.mjs`, which receives the same injected helpers (`identity`, `json`, `sb`, `uuid`, `originAllowed`, `readObject` from `lib/supabase.ts`). Tool logic lives in `lib/mcp-tools/*.mjs`, one file per tool group, each with unit tests.
-- Authentication: the connector sends `Authorization: Bearer <access token>`. `identity(req)` in `lib/supabase.ts` already validates a Supabase token against `/auth/v1/user` and returns `{id, email, access}`. Reuse it.
+- Authentication: the connector sends `Authorization: Bearer <access token>`. `identity(req)` in `lib/supabase.ts` already validates a Supabase token against `/auth/v1/user` and returns `{id, email, access}`. Reuse it for `/mcp`; see section 4 for why other routes must reject these tokens.
 
-## 4. Sign-in (OAuth)
+## 4. Sign-in (OAuth) and where permissions are enforced
 
-Connectors need an OAuth sign-in that returns a token the MCP server can use.
+Decision (8 Nov 2026): use Supabase's own OAuth sign-in. Supabase does not support our custom scopes, so **permissions are enforced in the database, keyed to the OAuth client, not in the consent screen or the MCP code alone.** Reason: a token from Supabase is an ordinary user token. It also works against Supabase's REST endpoint and against inbill's own `/api/*` routes, so any rule that lives only in the MCP server can be bypassed by a leaked or malicious connector.
 
-1. First check whether **Supabase Auth's built-in OAuth 2.1 server** is available for our project and plan. If yes, use it (consent screen, PKCE, token issue and refresh handled for us).
-2. If not, build a small OAuth layer on our domain: authorization-server metadata, protected-resource metadata, authorization endpoint with a consent page that shows the scopes, token endpoint with PKCE, refresh tokens, revocation, and dynamic client registration if the platforms require it. Tokens must map to a Supabase user session so row-level security still applies. Propose the design and its migration to the owner before building.
-3. Consent page: shows the app name, the business(es) it can reach and the scopes. The user picks the business and can turn scopes off.
-4. Scopes: `inbill.read` (read records and reports), `inbill.draft` (create and edit drafts), `inbill.act` (record payments, prepare reminders; never issue). Default grant is read and draft.
-5. Users must be able to see and revoke connected apps in Settings (small new section; coordinate with Phase 1 to 4 owner for the page).
-6. Needs the real domain for the issuer and redirect URLs. Until then develop against a Vercel preview URL.
+1. **Step 0, verify first.** Confirm on our project that Supabase's OAuth server is available on our plan and that tokens it issues carry a client identifier claim (`client_id`) which an ordinary web-login token does not. Write the result in `docs/PHASE5-NOTES.md`. If the claim is missing, stop: this design does not work and we need our own small token server (propose it to the owner).
+2. **Grants table.** One row per user, business, OAuth client and scopes (`read`, `draft`, `act`), with created and revoked times. Row-level security on. Only the user's normal web session (no `client_id` claim) may create or revoke a grant; a connector token can never grant itself anything. The consent page writes it through a function bound to `auth.uid()`.
+3. **Central rule.** `billing_can_access(b, writing)` and `billing_is_owner(b)` are used by almost every table's policy. Change them so that if the token has a `client_id`, access requires an active grant for that business, and writing requires the `draft` or `act` scope. No grant means no rows. **Start from the latest definition in `supabase/migrations/202611080001_business_deletion.sql`** (it also refuses deleted businesses); do not redefine from an older migration. Check the other helpers that test ownership on their own (for example the CRM ones) and apply the same rule.
+4. **Deny list inside the database.** For tokens with a `client_id`, these must fail in the database functions themselves, not only be absent from the tool list: issuing, cancelling, deleting a business, team and settings changes, share links, payment links, automation changes, and grant management.
+5. **Belt and braces.** `identity()` in `lib/supabase.ts` must reject tokens with a `client_id` everywhere except the `/mcp` route.
+6. **Consent page.** Shows the app name, lets the user pick the business and switch scopes off (default read and draft). Settings gets a "Connected apps" list with revoke. Revoking sets `revoked_at` (effective on the next query, because the grant is checked every time) and ends the OAuth session.
+7. **Tests.** Using a token that carries a connector `client_id`: no grant sees nothing; a read grant cannot write; a draft grant can create a draft but cannot issue, cancel, delete a business, change settings or members, share, or touch payment links; a revoked grant sees nothing; a direct database call and a call to a normal `/api/*` route are both refused; another business is unreachable; a connector token cannot create its own grant. Extend `tests/helpers/payment-db.mjs` to set `request.jwt.claims` with a `client_id`.
+8. The migration needs the owner's approval before it touches production, and Claude Code (Phase 4) must be told when it is written so the CA-view migration is rebased after it.
 
 ## 5. Tools
 
@@ -100,7 +102,7 @@ These double as growth hooks. They must not touch the database. Rate limit by IP
 
 ## 9. Database changes expected (propose only; owner approves)
 
-- A table for connected apps and consent (user, business, client name, scopes, created, revoked).
+- The grants table and the changes to the central access functions described in section 4.
 - A table or column for the per-business "Allow AI assistants" switch.
 - A rate-limit counter table (or use an existing store if there is one).
 - An audit source value for assistant-made writes.
