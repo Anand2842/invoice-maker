@@ -24,6 +24,7 @@ Status words: **Available** works and was tested. **Basic** works with limits. *
 | TDS | Records and certificates | Basic | Manual |
 | Automation | Recurring invoices, reminders | Basic | Email sending not switched on |
 | Team | Roles, activity log, delete a business (two steps) | Available | |
+| Accountants | All businesses overview; invite a client by link (accountant added as admin after the client agrees) | Basic | First release (9 Nov 2026): no per-client GST readiness, no bulk actions |
 | Setup | Getting started, sample data, page guides | Available | |
-| Coming soon | CA view, Claude and ChatGPT connector, search, reports page, approvals, editor extras, IndiaMART sync, public API, phone apps | Coming soon | |
+| Coming soon | CA view extras (GST readiness per client, bulk actions), Claude and ChatGPT connector, search, reports page, approvals, editor extras, IndiaMART sync, public API, phone apps | Coming soon | |
 | Not planned | Payroll and HR, greetings, reviews, growth suite | | |
