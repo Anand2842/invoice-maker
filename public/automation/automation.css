@@ -1,7 +1,7 @@
 .panel form{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:12px 0}
 .panel label{display:grid;gap:6px}
 .panel label.check{display:flex;align-items:center;gap:8px;flex-basis:100%}
-.hint{color:#5b5068}
+.hint{color:#566062}
 .table-wrap{overflow-x:auto}
 #link-url{width:min(100%,640px);font-family:ui-monospace,monospace}
 code{overflow-wrap:anywhere}

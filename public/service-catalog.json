@@ -127,13 +127,13 @@
   },
   {
     "id": "mcp",
-    "name": "Folio MCP",
+    "name": "inbill MCP",
     "source": "https://www.refrens.com/en-in/refrens-mcp",
     "group": "Products",
     "module": "mcp",
     "launchStatus": "Coming soon",
-    "launchDescription": "An independent MCP service has not been built. This app does not use Folio MCP.",
-    "launchName": "Folio MCP",
+    "launchDescription": "An independent MCP service has not been built. This app does not use inbill MCP.",
+    "launchName": "inbill MCP",
     "actionLabel": ""
   },
   {
@@ -155,7 +155,7 @@
     "module": "subscriptions",
     "launchStatus": "Available",
     "launchName": "Recurring invoices",
-    "launchDescription": "Set a schedule and Folio creates the invoice draft each time, once a day. Automatic card charging is not included.",
+    "launchDescription": "Set a schedule and inbill creates the invoice draft each time, once a day. Automatic card charging is not included.",
     "actionLabel": ""
   },
   {

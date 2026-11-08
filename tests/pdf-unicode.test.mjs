@@ -50,7 +50,7 @@ function widths(pdf,descendant){
 }
 
 test('WinAnsi output is byte-for-byte unchanged',async()=>{
- const expected='ec6065eda6696d48cb85763e1e7d03cc6ea4febb9bd53eaf2bbaf68e4d2c91f9';
+ const expected='05a2073562fbe8780d9b2e5863bb62cc8e0f959bb8b00a1b3b5173ae796b9045';
  for(const result of [build(doc),await buildWithImages(doc,{loadFonts:()=>{throw Error('WinAnsi must not load fonts');}})])assert.equal(createHash('sha256').update(result.bytes).digest('hex'),expected);
 });
 

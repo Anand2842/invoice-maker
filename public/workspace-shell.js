@@ -22,7 +22,7 @@ function syncSampleParam(){const p=new URLSearchParams(location.search);if(!p.ha
 
 function ensureStyles(){if(document.querySelector('link[data-shell-css]'))return;const l=document.createElement('link');l.rel='stylesheet';l.href='/workspace-shell.css';l.dataset.shellCss='true';document.head.append(l)}
 
-export function brandHeader(){const header=document.querySelector('body>header');if(!header)return;header.classList.add('folio-header');const brand=header.querySelector('.brand');if(brand){brand.innerHTML='folio.<small>Billing workspace</small>';brand.href='/';brand.setAttribute('aria-label','Folio home')}const links=[...header.querySelectorAll('a[data-account-link],a[href*="returnTo="]')];links.forEach(a=>a.href=loginURL());
+export function brandHeader(){const header=document.querySelector('body>header');if(!header)return;header.classList.add('folio-header');const brand=header.querySelector('.brand');if(brand){brand.innerHTML='inbill.<small>Billing workspace</small>';brand.href='/';brand.setAttribute('aria-label','inbill home')}const links=[...header.querySelectorAll('a[data-account-link],a[href*="returnTo="]')];links.forEach(a=>a.href=loginURL());
  // Signed-in visitors should not be offered "Log in".
  if(links.length)fetch('/api/auth').then(r=>r.ok?r.json():null).then(d=>{if(d?.user)links.forEach(a=>{a.textContent='Workspace';a.href='/services/'})}).catch(()=>{})}
 
@@ -30,7 +30,7 @@ export function addWorkspaceNav(){
  if(document.querySelector('[data-workspace-nav]'))return;ensureStyles();
  const aside=document.createElement('aside');aside.dataset.workspaceNav='true';aside.className='folio-sidebar';aside.id='folio-sidebar';aside.setAttribute('aria-label','Workspace');
  let open={};try{open=JSON.parse(localStorage.getItem('folio-nav-open')||'{}')}catch{}
- const top=document.createElement('div');top.className='folio-sidebar-top';top.innerHTML='<a class="folio-sidebar-brand" href="/dashboard/">folio.</a><a class="folio-sidebar-new" href="/free-online-invoice-generator/?document=invoice&fresh=true">+ New invoice</a>';aside.append(top);
+ const top=document.createElement('div');top.className='folio-sidebar-top';top.innerHTML='<a class="folio-sidebar-brand" href="/dashboard/">inbill.</a><a class="folio-sidebar-new" href="/free-online-invoice-generator/?document=invoice&fresh=true">+ New invoice</a>';aside.append(top);
  const nav=document.createElement('nav');nav.setAttribute('aria-label','Workspace sections');
  for(const[group,items]of navGroups){const current=items.some(([,h])=>isCurrent(h));
   const list=document.createElement('div');list.className='folio-sidebar-links';

@@ -48,7 +48,7 @@ q('#sample-button').addEventListener('click',async e=>{const b=e.currentTarget,s
  if(new URLSearchParams(location.search).get('demo')==='true'){setSampleMode(false);return}
  const ws=await api('/api/workspace');
  wireBusinessForm(()=>location.reload());
- if(!ws.businesses.length){status('');q('#start-business').hidden=false;q('#start-title').textContent='Welcome to Folio';q('#start-lede').textContent='Start with your business details. It takes about a minute.';return}
+ if(!ws.businesses.length){status('');q('#start-business').hidden=false;q('#start-title').textContent='Welcome to inbill';q('#start-lede').textContent='Start with your business details. It takes about a minute.';return}
  const business=selectedBusiness(ws.businesses);status('');q('#start-grid').hidden=false;
  await checklist(business);
 }catch(error){status(error.message,true)}})();

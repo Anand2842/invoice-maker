@@ -1,11 +1,11 @@
 /* Shared workspace shell: grouped sidebar, phone drawer, sample-data banner and the Help & demo launcher.
    Scoped to its own classes so page stylesheets (which still carry old .workspace-nav rules) cannot collide. */
-:root{--shell-w:244px;--shell-ink:#241f31;--shell-muted:#6b6480;--shell-line:#e7e2ef;--shell-bg:#ffffff;--shell-accent:#5b3fa8;--shell-accent-soft:#f1ecfb;--shell-warn-bg:#fff6dd;--shell-warn-ink:#6d4c00}
+:root{--shell-w:244px;--shell-ink:#042f2e;--shell-muted:#6b7679;--shell-line:#e2efee;--shell-bg:#ffffff;--shell-accent:#0f766e;--shell-accent-soft:#edfaf9;--shell-warn-bg:#fff6dd;--shell-warn-ink:#6d4c00}
 .folio-sidebar{position:fixed;inset:0 auto 0 0;width:var(--shell-w);box-sizing:border-box;background:var(--shell-bg);border-right:1px solid var(--shell-line);display:flex;flex-direction:column;z-index:40;font:14px/1.4 'Folio Sans',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--shell-ink)}
 .folio-sidebar-top{display:grid;gap:14px;padding:20px 18px 14px}
 .folio-sidebar-brand{font:600 24px/1 'Folio Sans',system-ui,sans-serif;color:var(--shell-accent);text-decoration:none;letter-spacing:-.02em}
 .folio-sidebar-new{display:block;text-align:center;background:var(--shell-accent);color:#fff;text-decoration:none;border-radius:8px;padding:9px 12px;font-weight:600}
-.folio-sidebar-new:hover{background:#4a3290}
+.folio-sidebar-new:hover{background:#134e4a}
 .folio-sidebar nav{flex:1;overflow-y:auto;padding:4px 10px 12px;display:grid;align-content:start;gap:2px}
 .folio-sidebar details{border-top:1px solid var(--shell-line);padding-top:4px;margin-top:4px}
 .folio-sidebar summary{cursor:pointer;list-style:none;padding:8px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--shell-muted);display:flex;justify-content:space-between;align-items:center}
@@ -14,10 +14,10 @@
 .folio-sidebar details[open] summary::after{content:'−'}
 .folio-sidebar-links{display:grid;gap:1px;padding-bottom:4px}
 .folio-sidebar-links a{display:block;padding:7px 10px;border-radius:6px;color:var(--shell-ink);text-decoration:none}
-.folio-sidebar-links a:hover{background:#f6f3fb}
+.folio-sidebar-links a:hover{background:#f3fbfb}
 .folio-sidebar-links a[aria-current=page]{background:var(--shell-accent-soft);color:var(--shell-accent);font-weight:600}
 .folio-sidebar a:focus-visible,.folio-sidebar summary:focus-visible,.folio-sidebar button:focus-visible,.folio-menu-button:focus-visible,.folio-guide-button:focus-visible{outline:2px solid var(--shell-accent);outline-offset:2px}
-.folio-sidebar-help{margin:8px 12px 16px;padding:9px;border:1px dashed #cfc4e3;background:transparent;border-radius:8px;color:var(--shell-accent);font:600 13px 'Folio Sans',system-ui,sans-serif;cursor:pointer}
+.folio-sidebar-help{margin:8px 12px 16px;padding:9px;border:1px dashed #c4e3e1;background:transparent;border-radius:8px;color:var(--shell-accent);font:600 13px 'Folio Sans',system-ui,sans-serif;cursor:pointer}
 .folio-menu-button{display:none}
 /* Old horizontal strip: never show it once the sidebar exists. */
 html.folio-has-sidebar .workspace-nav:not(.folio-sidebar){display:none!important}
@@ -27,8 +27,8 @@ html.folio-has-sidebar .workspace-nav:not(.folio-sidebar){display:none!important
 }
 @media (max-width:1099.98px){
  .folio-sidebar{transform:translateX(-102%);transition:transform .2s ease;box-shadow:none;width:min(84vw,300px);padding-left:env(safe-area-inset-left,0px)}
- html.folio-nav-open .folio-sidebar{transform:none;box-shadow:0 0 0 100vmax rgba(20,14,34,.0),8px 0 30px rgba(20,14,34,.18)}
- .folio-scrim{position:fixed;inset:0;background:rgba(20,14,34,.35);z-index:39}
+ html.folio-nav-open .folio-sidebar{transform:none;box-shadow:0 0 0 100vmax rgba(4,47,46,.0),8px 0 30px rgba(4,47,46,.18)}
+ .folio-scrim{position:fixed;inset:0;background:rgba(4,47,46,.35);z-index:39}
  .folio-menu-button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--shell-line);background:#fff;color:var(--shell-ink);border-radius:8px;padding:7px 12px;font:600 14px 'Folio Sans',system-ui,sans-serif;cursor:pointer;margin-right:12px}
  .folio-menu-button::before{content:'';width:14px;height:10px;background:linear-gradient(currentColor 0 0) top/100% 2px no-repeat,linear-gradient(currentColor 0 0) center/100% 2px no-repeat,linear-gradient(currentColor 0 0) bottom/100% 2px no-repeat}
 }
@@ -36,10 +36,10 @@ html.folio-nav-open .folio-guide-button{display:none}
 @media (prefers-reduced-motion:reduce){.folio-sidebar{transition:none}}
 .folio-sample-banner{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;background:var(--shell-warn-bg);color:var(--shell-warn-ink);border-bottom:1px solid #f0dfa6;padding:10px max(16px,4%);font:14px/1.45 'Folio Sans',system-ui,sans-serif}
 .folio-sample-banner button{border:1px solid currentColor;background:transparent;color:inherit;border-radius:6px;padding:5px 10px;font:600 13px inherit;cursor:pointer}
-.folio-guide-button{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:45;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:99px;background:var(--shell-ink);color:#fff;padding:10px 16px 10px 10px;font:600 14px 'Folio Sans',system-ui,sans-serif;box-shadow:0 6px 20px rgba(20,14,34,.25);cursor:pointer}
+.folio-guide-button{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:45;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:99px;background:var(--shell-ink);color:#fff;padding:10px 16px 10px 10px;font:600 14px 'Folio Sans',system-ui,sans-serif;box-shadow:0 6px 20px rgba(4,47,46,.25);cursor:pointer}
 .folio-guide-button span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#fff;color:var(--shell-ink);font-weight:700}
 /* Guide drawer (filled by /guides.js) */
-.folio-guide{position:fixed;inset:0 0 0 auto;width:min(440px,100vw);box-sizing:border-box;background:#fff;z-index:60;box-shadow:-10px 0 40px rgba(20,14,34,.2);display:flex;flex-direction:column;font:15px/1.55 'Folio Sans',system-ui,sans-serif;color:var(--shell-ink);padding-bottom:env(safe-area-inset-bottom,0px)}
+.folio-guide{position:fixed;inset:0 0 0 auto;width:min(440px,100vw);box-sizing:border-box;background:#fff;z-index:60;box-shadow:-10px 0 40px rgba(4,47,46,.2);display:flex;flex-direction:column;font:15px/1.55 'Folio Sans',system-ui,sans-serif;color:var(--shell-ink);padding-bottom:env(safe-area-inset-bottom,0px)}
 .folio-guide header{display:flex;justify-content:space-between;align-items:start;gap:12px;padding:20px 22px 12px;border-bottom:1px solid var(--shell-line);background:#fff}
 .folio-guide header p{margin:0;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--shell-accent)}
 .folio-guide h2{margin:4px 0 0;font-size:21px;line-height:1.25}
@@ -48,11 +48,11 @@ html.folio-nav-open .folio-guide-button{display:none}
 .folio-guide-body h3{margin:0 0 6px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--shell-muted)}
 .folio-guide-body ol,.folio-guide-body ul{margin:0;padding-left:1.2em;display:grid;gap:6px}
 .folio-guide-body p{margin:0}
-.folio-guide-demo{border:1px solid #e4dbf5;background:var(--shell-accent-soft);border-radius:10px;padding:14px;display:grid;gap:10px}
+.folio-guide-demo{border:1px solid #dbf5f3;background:var(--shell-accent-soft);border-radius:10px;padding:14px;display:grid;gap:10px}
 .folio-guide-actions{margin:0}.folio-guide-actions a{color:var(--shell-accent);font-weight:600}
 .folio-guide-demo button{justify-self:start;border:0;border-radius:8px;background:var(--shell-accent);color:#fff;padding:9px 14px;font:600 14px 'Folio Sans',system-ui,sans-serif;cursor:pointer;text-decoration:none}
 .folio-guide-demo button[disabled]{opacity:.6;cursor:progress}
 .folio-guide-demo [role=status]{font-size:13px;color:var(--shell-muted)}
 .folio-guide-term{display:grid;gap:2px}.folio-guide-term strong{font-size:14px}
-.folio-guide-backdrop{position:fixed;inset:0;background:rgba(20,14,34,.3);z-index:59}
+.folio-guide-backdrop{position:fixed;inset:0;background:rgba(4,47,46,.3);z-index:59}
 @media print{.folio-sidebar,.folio-menu-button,.folio-guide-button,.folio-sample-banner,.folio-scrim,.folio-guide,.folio-guide-backdrop{display:none!important}html.folio-has-sidebar body{padding-left:0!important}}

@@ -219,7 +219,7 @@ function normalize(input) {
     seller: party(input.seller, 'Seller'), buyer: party(input.buyer, 'Buyer'),
     notes: textValue(input.notes, 'Notes'), terms: textValue(input.terms, 'Terms'),
     shipping: input.shipping, transport: input.transport, customFields: input.customFields, taxDetails: input.taxDetails,
-    orderConversion:input.orderConversion, signature: input.signature, logo: input.logo, bank: input.bank, template: input.template || 'classic', brandColor: input.brandColor || '#6040a0', embedImages: input.embedImages === true,
+    orderConversion:input.orderConversion, signature: input.signature, logo: input.logo, bank: input.bank, template: input.template || 'classic', brandColor: input.brandColor || '#115e59', embedImages: input.embedImages === true,
   };
   templateStyle(document.template, document.brandColor);
   if (document.number.length > 200) throw new RangeError('Document number is too long (maximum 200 characters).');
@@ -803,7 +803,7 @@ export async function preview(input, onTemplateChange) {
   const dialog = document.createElement('dialog');
   dialog.className = 'refrens-document-preview';
   dialog.setAttribute('aria-label', 'PDF document preview');
-  dialog.style.cssText = 'box-sizing:border-box;margin:auto;inset:0;width:min(1100px,96vw);max-width:96vw;max-height:95vh;padding:20px;border:1px solid #dedbe8;border-radius:12px;background:white;color:#242033;box-shadow:0 20px 70px #0004;';
+  dialog.style.cssText = 'box-sizing:border-box;margin:auto;inset:0;width:min(1100px,96vw);max-width:96vw;max-height:95vh;padding:20px;border:1px solid #dbe8e7;border-radius:12px;background:white;color:#042f2e;box-shadow:0 20px 70px #0004;';
   const toolbar = document.createElement('div');
   toolbar.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;';
   const heading = document.createElement('h2');
@@ -812,13 +812,13 @@ export async function preview(input, onTemplateChange) {
   const save = document.createElement('button');
   save.type = 'button';
   save.textContent = 'Download PDF';
-  save.style.cssText = 'font:600 14px system-ui;padding:10px 16px;border:0;border-radius:6px;background:#6c43c0;color:white;cursor:pointer;';
+  save.style.cssText = 'font:600 14px system-ui;padding:10px 16px;border:0;border-radius:6px;background:#115e59;color:white;cursor:pointer;';
   save.addEventListener('click', () => downloadBuilt(result));
   const close = document.createElement('button');
   close.type = 'button';
   close.textContent = 'Close';
   close.setAttribute('aria-label', 'Close PDF preview');
-  close.style.cssText = 'font:500 14px system-ui;padding:10px 16px;border:1px solid #d8d4e2;border-radius:6px;background:white;color:#242033;cursor:pointer;';
+  close.style.cssText = 'font:500 14px system-ui;padding:10px 16px;border:1px solid #d8ddde;border-radius:6px;background:white;color:#042f2e;cursor:pointer;';
   close.addEventListener('click', () => dialog.close());
   const design = document.createElement('select');design.setAttribute('aria-label','Preview PDF design');
   for(const template of pdfTemplates){const option=document.createElement('option');option.value=template.id;option.textContent=template.name;design.append(option)}design.value=input.template||'classic';
@@ -835,13 +835,13 @@ export async function preview(input, onTemplateChange) {
   const frame = document.createElement('iframe');
   frame.title = `PDF preview: ${result.filename}`;
   frame.src = url;
-  frame.style.cssText = 'display:block;width:100%;height:68vh;min-height:300px;border:1px solid #e2dfe9;border-radius:4px;background:#eee;';
+  frame.style.cssText = 'display:block;width:100%;height:68vh;min-height:300px;border:1px solid #e2e5e6;border-radius:4px;background:#eee;';
   const fallback = document.createElement('a');
   fallback.href = url;
   fallback.target = '_blank';
   fallback.rel = 'noopener';
   fallback.textContent = 'Open PDF in a new tab';
-  fallback.style.cssText = 'display:inline-block;margin-top:10px;font:13px system-ui;color:#6033ac;';
+  fallback.style.cssText = 'display:inline-block;margin-top:10px;font:13px system-ui;color:#115e59;';
   dialog.append(previewStatus, frame, fallback);
   let revision=0;design.addEventListener('change',async()=>{const own=++revision;save.disabled=true;previewStatus.textContent='Rendering design…';try{const next=await buildWithImages({...input,template:design.value});if(own!==revision||!dialog.open)return;URL.revokeObjectURL(url);result=next;url=URL.createObjectURL(new Blob([result.bytes],{type:result.mime}));frame.src=url;fallback.href=url;previewStatus.textContent='Design updated';onTemplateChange?.(design.value);}catch(error){previewStatus.textContent=error.message;previewStatus.setAttribute('role','alert')}finally{if(own===revision)save.disabled=false}});
   dialog.addEventListener('close', () => { URL.revokeObjectURL(url); dialog.remove(); }, { once: true });

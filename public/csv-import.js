@@ -1,5 +1,5 @@
 // CSV import mapping shared by the import page (preview) and the server (authoritative validation).
-// Accepts Folio exports and common spreadsheet/Tally column names.
+// Accepts inbill exports and common spreadsheet/Tally column names.
 export const IMPORT_COLLECTIONS=['clients','vendors','items'];
 const party={name:['name','clientname','vendorname','customername','suppliername','partyname','ledgername','company','companyname','displayname'],email:['email','emailaddress','emailid'],phone:['phone','mobile','phonenumber','mobilenumber','mobileno','contactnumber'],address:['address','mailingaddress','billingaddress','address1'],gstin:['gstin','gstinuin','gstnumber','gst','taxid']};
 export const IMPORT_FIELDS={clients:party,vendors:party,items:{name:['name','itemname','stockitem','stockitemname','product','productname'],sku:['sku','itemcode','code','partno'],rate:['rate','unitprice','price','sellingprice','salesprice'],quantity:['quantity','qty','openingqty','openingquantity'],reorderLevel:['reorderlevel','reorder','minstock','minimumstock']}};
@@ -20,7 +20,7 @@ export function parseCsv(text){
  return rows.filter(r=>r.some(v=>v.trim()!==''));
 }
 const key=h=>String(h).toLowerCase().replace(/[^a-z0-9]/g,'');
-// Undo the formula guard Folio adds to exported text cells ('=SUM… becomes =SUM… text again; it is stored, never evaluated).
+// Undo the formula guard inbill adds to exported text cells ('=SUM… becomes =SUM… text again; it is stored, never evaluated).
 const clean=v=>{const t=String(v??'').trim();return /^'[=+@-]/.test(t)?t.slice(1):t};
 
 export function mapImport(collection,rows){

@@ -1,4 +1,4 @@
-/** The small, local-first workspace behind Folio. All currency values are INR. */
+/** The small, local-first workspace behind inbill. All currency values are INR. */
 const STORAGE_KEY = "folio.workspace.v1";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const clone = (value) => JSON.parse(JSON.stringify(value));

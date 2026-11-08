@@ -5,7 +5,7 @@ export const templates = Object.freeze([
   { id: 'compact', name: 'Compact', description: 'Dense item rows for longer invoices.' },
   { id: 'minimal', name: 'Minimal', description: 'Clean monochrome layout with light rules.' },
 ]);
-export function templateStyle(id = 'classic', color = '#6040a0') {
+export function templateStyle(id = 'classic', color = '#115e59') {
   if (!templates.some(t => t.id === id)) throw new RangeError('Choose a valid PDF template.');
   if (!/^#[0-9a-f]{6}$/i.test(color)) throw new RangeError('Choose a valid brand color.');
   const channels = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16) / 255);
