@@ -1,3 +1,5 @@
+> **Correction, 9 November 2026.** The sentence below calling Folio "an independent implementation" overstates it for the invoice editor. The folder `public/free-online-invoice-generator/` contains page templates, stylesheets and data files captured from Refrens' site (see `EDITOR-REWRITE-PLAN.md`), and `invoice-app.js` is built around that markup. The rest of the app (workspace, books, payments, GST, brand) is our own code. The editor must be rewritten before a public launch.
+
 # Folio reconstruction notes
 
 Reference: https://www.refrens.com/ — inspected 19 October 2026.
