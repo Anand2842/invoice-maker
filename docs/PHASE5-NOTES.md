@@ -1,4 +1,30 @@
-# Phase 5 implementation notes
+# Phase 5 notes
+
+## Status on 9 November 2026 (read this first)
+
+| Piece | State |
+| --- | --- |
+| Stage 1 public tools (HSN finder, GSTIN checker, GST calculator) and the `/mcp` route | Built and tested (8 tests). Off by default; `INBILL_MCP_ENABLED` must be set to turn it on |
+| Sign-in design | Decided: Supabase OAuth for login, permissions enforced in the database (spec section 4) |
+| Database access control for apps | Built and tested (`202611090002_connector_access.sql`, 6 tests). **Not applied to production** |
+| Signed-in read tools (Stage 2) and draft tools (Stage 3) | **Not built.** They need the OAuth server enabled and a way to test with a real token |
+| Consent screen and "Connected apps" in Settings | Not built |
+| Directory submissions | Not started; need a deployed, working connector first |
+
+### What only the owner can do
+1. Enable Supabase's OAuth server for the project (Authentication, OAuth Server) and set the consent page path. On 8 Nov it was disabled (`feature_disabled`).
+2. Point `inbill.live` at the Vercel project and set `INBILL_MCP_ENABLED=true` and `INBILL_MCP_ORIGIN=https://inbill.live` there. Also set an edge-wide IP rate limit.
+3. Approve applying `202611090002_connector_access.sql` to production (after `202611090001` and `202611080001`, which are already applied).
+4. Connect Claude and ChatGPT as custom connectors and run the manual checklist at the end of this file.
+
+### What the connector migration does and does not do
+- An app token (any token with a `client_id`) reaches a business only through an active grant the user made in their own web session, and only while the user still has access. It can read, never write, through the central checks, so every existing command is refused for it.
+- The test suite caught that `billing_delete_business` checked ownership directly; it now refuses app tokens. `billing_is_owner`, `billing_crm_writer` and `billing_accounting_can_review` do too.
+- **Known gap, low risk:** `billing_team_accept` (accepting a team invitation) does not refuse app tokens. It needs the secret invitation link, which an app never receives, and no tool exposes it. Close it when the migration is next touched.
+- **Known limit:** Supabase tokens do not carry an audience for our `/mcp` resource, so the MCP server cannot enforce RFC 8707 resource binding itself. Treat tokens as for inbill only and keep the `client_id` requirement.
+- Drafts (Stage 3) need narrow definer functions of their own; calling the existing number-series and save functions from inside one is blocked by the same central check, so they need connector-aware inner variants.
+
+# Phase 5 implementation notes (research and spike, written by the owner's agent on 8 Nov)
 
 ## Verified platform requirements (8 November 2026)
 
