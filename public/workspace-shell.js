@@ -42,6 +42,8 @@ export function addWorkspaceNav(){
  // Anyone who can open two or more businesses (an accountant) gets a link to the all-businesses overview.
  fetch('/api/workspace').then(r=>r.ok?r.json():null).then(d=>{if((d?.businesses?.length||0)<2)return;const first=nav.querySelector('.folio-sidebar-links');if(!first||first.querySelector('[data-all-businesses]'))return;const a=document.createElement('a');a.href='/businesses/';a.textContent='All businesses';a.dataset.allBusinesses='true';if(isCurrent('/businesses/'))a.setAttribute('aria-current','page');first.prepend(a)}).catch(()=>{});
  const help=document.createElement('button');help.type='button';help.className='folio-sidebar-help';help.textContent='How this page works';help.addEventListener('click',()=>openGuide());aside.append(help);
+ // Signed-in people get Sign out at the bottom of the menu, the same place on every page.
+ fetch('/api/auth').then(r=>r.ok?r.json():null).then(d=>{if(!d?.user||aside.querySelector('[data-sign-out]'))return;const out=document.createElement('button');out.type='button';out.className='folio-sidebar-signout';out.dataset.signOut='true';out.textContent='Sign out';out.title=d.user.email||'';out.addEventListener('click',async()=>{out.disabled=true;try{await signOut(d.user.id)}finally{location.assign('/')}});aside.append(out)}).catch(()=>{});
  document.body.prepend(aside);document.documentElement.classList.add('folio-has-sidebar');
  // Phone and tablet: the sidebar becomes a drawer behind a Menu button in the page header.
  const header=document.querySelector('body>header')||document.querySelector('header');const menu=document.createElement('button');menu.type='button';menu.className='folio-menu-button';menu.textContent='Menu';menu.setAttribute('aria-controls','folio-sidebar');menu.setAttribute('aria-expanded','false');
@@ -66,5 +68,12 @@ function paymentMethodSuggestions(){const attach=e=>{const input=e.target;if(!(i
 export async function openGuide(){const{showGuide}=await import('/guides.js');showGuide()}
 
 export async function api(path,options={},retried=false){const r=await fetch(path,{...options,headers:{...(options.body instanceof FormData?{}:{'Content-Type':'application/json'}),...options.headers}});const data=await r.json();if(!r.ok){if(r.status===401&&!retried&&path!=='/api/auth'){const refresh=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'refresh'})});if(refresh.ok)return api(path,options,true)}throw Object.assign(Error(data.error||'Request failed'),{status:r.status})}return data}
+// Signs the user out and clears what belongs to their account on this device (the same steps the Tools page used to run).
+export async function signOut(userId){
+ const{clearAccountDrafts,announceAuthChange}=await import('/drafts.js');
+ await api('/api/auth',{method:'POST',body:JSON.stringify({action:'logout'})});
+ if(userId){announceAuthChange(userId,'logout');await clearAccountDrafts(userId)}
+ try{sessionStorage.removeItem('folio-guest-drafts');localStorage.removeItem('billing-active-business')}catch{}
+}
 export function selectedBusiness(businesses){const explicit=new URLSearchParams(location.search).get('business'),selected=explicit||localStorage.getItem('billing-active-business'),b=businesses.find(b=>b.id===selected)||(!explicit?businesses[0]:null);if(explicit&&!b)throw Error('This business is unavailable to your account.');if(b)localStorage.setItem('billing-active-business',b.id);return b}
 syncSampleParam();brandHeader();addWorkspaceNav();paymentMethodSuggestions();

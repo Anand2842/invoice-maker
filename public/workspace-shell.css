@@ -56,3 +56,4 @@ html.folio-nav-open .folio-guide-button{display:none}
 .folio-guide-term{display:grid;gap:2px}.folio-guide-term strong{font-size:14px}
 .folio-guide-backdrop{position:fixed;inset:0;background:rgba(4,47,46,.3);z-index:59}
 @media print{.folio-sidebar,.folio-menu-button,.folio-guide-button,.folio-sample-banner,.folio-scrim,.folio-guide,.folio-guide-backdrop{display:none!important}html.folio-has-sidebar body{padding-left:0!important}}
+.folio-sidebar-signout{margin:6px 12px 14px;padding:8px 12px;border:0;background:none;color:#4b5f60;font:600 13px 'Folio Sans',system-ui,sans-serif;text-align:left;cursor:pointer;border-radius:8px}.folio-sidebar-signout:hover{background:#f0fdfa;color:#115e59}

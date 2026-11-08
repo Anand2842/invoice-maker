@@ -1,6 +1,6 @@
 import {recoveryAction,recoveryReady} from '../../../lib/recovery.mjs';
 import{readObject,identity,json,sb,originAllowed,token,refreshToken,sessionResponse}from'../../../lib/supabase';
-export async function GET(req:Request){if(new URL(req.url).searchParams.get('recovery')==='true')return recoveryReady(req,sb);const user=await identity(req);if(user)return json({user:{id:user.id,email:user.email}});if(refreshToken(req)){const r=await sb('/auth/v1/token?grant_type=refresh_token','',{method:'POST',body:JSON.stringify({refresh_token:refreshToken(req)})});if(r.ok)return sessionResponse(req,r.data)}return json({user:null});}
+export async function GET(req:Request){if(new URL(req.url).searchParams.get('recovery')==='true')return recoveryReady(req,sb);const user=await identity(req);if(user)return json({user:{id:user.id,email:user.email,name:user.name}});if(refreshToken(req)){const r=await sb('/auth/v1/token?grant_type=refresh_token','',{method:'POST',body:JSON.stringify({refresh_token:refreshToken(req)})});if(r.ok)return sessionResponse(req,r.data)}return json({user:null});}
 export async function POST(req:Request){
  if(!originAllowed(req))return json({error:'Origin is not allowed'},403);
  try{const body=await readObject(req);const action=body.action;

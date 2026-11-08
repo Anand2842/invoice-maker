@@ -266,7 +266,9 @@
     if(!select){const label=document.createElement('label');label.className='folio-payment-terms';label.textContent='Payment terms';select=document.createElement('select');select.dataset.paymentTerms='true';for(const [v,t] of termChoices)select.add(new Option(t,v));label.append(select);let row=due;while(row.parentElement&&row.parentElement!==form&&!row.querySelector('[name="customLabels.dueDate"]'))row=row.parentElement;row.after(label)}
     select.value=due.dataset.terms||'';if(wiredTerms.has(select))return;wiredTerms.add(select);
     select.addEventListener('change',()=>{const d=q('input[name=dueDate]',form);if(!d)return;if(select.value)d.dataset.terms=select.value;else delete d.dataset.terms;applyTerms();update()})}
-  function setPaymentTerms(days){const add=qa('button',form).find(b=>b.textContent.trim()==='Add due date');if(add)optional(add,'dueDate');const due=q('input[name=dueDate]',form);if(!due)return;due.dataset.terms=String(days);preparePaymentTerms();applyTerms()}
+  function setPaymentTerms(days){const add=qa('button',form).find(b=>b.textContent.trim()==='Add due date');if(add)optional(add,'dueDate');const due=q('input[name=dueDate]',form);if(!due)return;due.dataset.terms=String(days);preparePaymentTerms();applyTerms();
+    // Adding the due-date field recalculates once before the terms date is filled in, which can flash a false error.
+    update();const note=q('[data-document-status]');if(note&&/^Due date cannot be before/.test(note.textContent))status('')}
   function prepareDates(){
     qa('input[name="invoiceDate"],input[name="dueDate"]',form).forEach(input=>{if(input.dataset.dateReady)return;input.dataset.dateReady='true';input.addEventListener('click',()=>showCalendar(input));const wrapper=input.closest('.react-datepicker__input-container');q('button',wrapper)?.addEventListener('click',()=>showCalendar(input))});preparePaymentTerms();
   }
@@ -441,7 +443,11 @@
       const n=Number(input.value),isQty=input.name.endsWith('.quantity'),tax=input.name.endsWith('.gstRate');
       if(!input.value.trim()||!Number.isFinite(n)||n<0||(isQty&&n<=0)||(tax&&n>100)){input.setCustomValidity(isQty?'Enter a quantity greater than zero':tax?'Enter a tax rate from 0 to 100':'Enter a non-negative number');input.reportValidity();return false}}
     for(const name of ['invoiceDate','dueDate']){const input=q('[name="'+name+'"]',form);if(input?.value){try{dateISO(input.value)}catch(e){input.setCustomValidity(e.message);input.reportValidity();return false}}}
-    return form.reportValidity();
+    if(form.checkValidity())return true;
+    // Say why nothing happened: browsers may only show a small bubble, or none, when the page jumps to the field.
+    const bad=form.querySelector(':invalid');
+    status(bad?.name==='billedTo.name'?'Add your client’s name to continue.':(bad?.validationMessage||'Complete the highlighted field to continue.'),true);
+    form.reportValidity();return false;
   }
   async function downloadDocument(){if(!validate())return;try{const m=await exportModule,result=await m.download(getDocument());saveDraft();status('Downloaded '+result.filename+(result.warnings.length?' — '+result.warnings.join(' '):''));return result}catch(e){status(e.message,true)}}
   async function previewDocument(){if(!validate())return;try{const m=await exportModule;return await m.preview(getDocument(),template=>{state.template=template;const select=q('[data-pdf-template]');if(select)select.value=template;saveDraft()})}catch(e){status(e.message,true)}}

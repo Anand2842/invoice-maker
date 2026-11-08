@@ -8,7 +8,8 @@ import{visibleInvoices,settlementLabels,invoiceURL,statementURL}from'./view.mjs'
 
 const q=s=>document.querySelector(s),params=new URLSearchParams(location.search);
 let businesses=[],report=null,context=null,generation=0,dateEdited=params.has('date');
-const money=n=>new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+// Same style as the dashboard: ₹45,488.00, using the currency chosen in the filters.
+const money=n=>{const code=/^[A-Z]{3}$/.test(document.querySelector('#currency')?.value||'')?document.querySelector('#currency').value:'INR';try{return new Intl.NumberFormat('en-IN',{style:'currency',currency:code}).format(n)}catch{return new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n)}};
 q('#as-of').value=params.get('date')||businessDate();
 q('#demo').value=params.get('demo')==='true'||(!params.has('demo')&&sessionStorage.getItem('billing-demo-mode')==='true')?'true':'false';
 

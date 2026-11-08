@@ -11,8 +11,8 @@ export async function sb(path:string,access:string,init:RequestInit={}){
  let response;try{response=await fetch(SUPABASE_URL+path,{...init,headers,signal:init.signal||AbortSignal.timeout(25000)});}catch{return{ok:false,status:503,data:{message:'The data service did not respond. Please try again.'}}}const raw=await response.text();let data;try{data=raw?JSON.parse(raw):null}catch{data=null}
  return {ok:response.ok,status:response.status,data};
 }
-export async function identity(req:Request){const access=token(req);if(!access)return null;const r=await sb('/auth/v1/user',access);return r.ok&&r.data?.id?{id:r.data.id,email:r.data.email,access}:null;}
-export function sessionResponse(req:Request,data:any){const out=json({user:{id:data.user?.id,email:data.user?.email},authenticated:true});const secure=new URL(req.url).protocol==='https:'?'; Secure':'';
+export async function identity(req:Request){const access=token(req);if(!access)return null;const r=await sb('/auth/v1/user',access);return r.ok&&r.data?.id?{id:r.data.id,email:r.data.email,name:typeof r.data.user_metadata?.name==='string'?r.data.user_metadata.name:'',access}:null;}
+export function sessionResponse(req:Request,data:any){const out=json({user:{id:data.user?.id,email:data.user?.email,name:typeof data.user?.user_metadata?.name==='string'?data.user.user_metadata.name:''},authenticated:true});const secure=new URL(req.url).protocol==='https:'?'; Secure':'';
  out.headers.append('Set-Cookie',`billing_access=${data.access_token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${Math.min(data.expires_in||3600,86400)}${secure}`);
  out.headers.append('Set-Cookie',`billing_refresh=${data.refresh_token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000${secure}`);return out;}
 export const uuid=(v:unknown):v is string=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
