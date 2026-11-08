@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#faf9f6">
+  <title>Roadmap — inbill</title>
+  <meta name="description" content="What works in inbill today, what is basic, what is practice only and what is coming soon.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/home.css">
+  <link rel="stylesheet" href="/info-pages.css">
+</head>
+<body>
+  <header class="site-header wrap">
+    <a class="brand" href="/" aria-label="inbill home"><svg width="32" height="36" viewBox="0 0 32 36" fill="none" aria-hidden="true"><path d="M5 3h16l7 7v21a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V3Z" fill="currentColor"/><path d="M21 3v7h7" fill="#fff" opacity=".35"/><path d="m10.5 22 4 4 7.5-9" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>inbill<span class="brand-dot">.</span></span></a>
+    <nav aria-label="Main navigation"><a href="/roadmap/">Roadmap</a><a href="/for-cas/">For CAs</a><a href="/services/">Explore tools</a><a class="login-link" href="/services/?account=login">Log in <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main id="main" class="wrap info">
+    <p class="eyebrow">ROADMAP</p>
+    <h1>What works, and what does not yet</h1>
+    <p class="lede">We label every tool with one of four words, so you never have to guess. No dates are promised; the order follows what customers ask for.</p>
+    <dl class="legend">
+      <div><dt><span class="tag ok">Available</span></dt><dd>Works and has been tested.</dd></div>
+      <div><dt><span class="tag basic">Basic</span></dt><dd>Works, with limits described below.</dd></div>
+      <div><dt><span class="tag practice">Practice only</span></dt><dd>A rehearsal. Nothing is sent to a government, bank or other outside service.</dd></div>
+      <div><dt><span class="tag soon">Coming soon</span></dt><dd>Not built yet, or waiting on a connection.</dd></div>
+    </dl>
+
+    <h2>Practice only</h2>
+    <ul class="items">
+      <li><strong>e-Invoice and e-Way Bill.</strong> The steps and checks work, but the numbers and QR codes are practice values, not government registrations. A real GST provider connection is the next step.</li>
+    </ul>
+
+    <h2>Basic: works, with limits</h2>
+    <ul class="items">
+      <li><strong>GST returns.</strong> GSTR-1 and GSTR-3B files and a GSTR-2B check are prepared for your CA to review and upload. inbill does not file returns.</li>
+      <li><strong>Bank matching.</strong> Match bank entries to payments by hand. There are no live bank feeds.</li>
+      <li><strong>Items and stock.</strong> Stock movements and valuation work. Ready-made stock reports are missing.</li>
+      <li><strong>Leads.</strong> Stages, follow-ups and lead to quotation. Lead forms, meetings and message templates are missing.</li>
+      <li><strong>Recurring invoices and reminders.</strong> Schedules and reminders are set up in the app; sending them by email is not switched on yet.</li>
+      <li><strong>TDS.</strong> Manual records and certificates.</li>
+      <li><strong>All businesses and client links.</strong> One screen for accountants showing what each business owes and what is overdue, and links to invite a client. First release: no per-client GST readiness yet and no bulk actions.</li>
+    </ul>
+
+    <h2>Coming soon</h2>
+    <ul class="items">
+      <li><strong>Email sending</strong> of invoices and reminders. Waits on an email service being connected.</li>
+      <li><strong>Online payment</strong> by card or UPI on a payment link. Waits on a payment provider being connected. UPI details already print on invoices.</li>
+      <li><strong>CA view extras.</strong> GST readiness per client on the overview, and bulk actions.</li>
+      <li><strong>Claude and ChatGPT connector.</strong> Create and look up bills by chatting.</li>
+      <li><strong>Search</strong> across clients, vendors, items and documents, and <strong>one page of all reports</strong>.</li>
+      <li><strong>Scan a bill</strong> and <strong>bulk upload</strong> from Excel on every list.</li>
+      <li><strong>Day book</strong> and <strong>cash flow statement</strong>.</li>
+      <li><strong>Approval steps</strong> for quotations, expenses and purchase orders.</li>
+      <li><strong>Invoice editor extras:</strong> saved formats, PO number, extra charges such as freight.</li>
+      <li><strong>IndiaMART lead sync</strong> and a <strong>public API</strong>.</li>
+      <li><strong>Phone apps.</strong> The site already works in a phone browser.</li>
+    </ul>
+
+    <h2>Not planned</h2>
+    <p>Payroll and HR, greetings and reviews, and a growth suite. They are different products from invoicing.</p>
+    <p class="note">Last reviewed 8 November 2026.</p>
+  </main>
+  <footer class="site-footer wrap"><a class="footer-brand" href="/">inbill.</a><p>Plain about what works and what does not yet.</p><a href="/services/">Your workspace <span aria-hidden="true">↗</span></a></footer>
+</body>
+</html>

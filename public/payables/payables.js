@@ -39,7 +39,7 @@ async function load(){
  q('#new-bill').hidden=!result.canWrite;
  if(result.configured&&result.canWrite&&(!result.vendors.length||!result.accounts.length))q('#availability').append(el('p','Add an active saved vendor and an expense or asset account before entering a bill.'));
  q('#all-bills').hidden=!result.detailOnly;q('#truncation').textContent=[result.detailOnly?'Showing the selected bill. Summary totals cover every bill in this data mode.':'',result.billsTruncated?'Showing the latest 500 bills. Totals include all issued bills.':'',result.vendorsTruncated?'Only the first 500 active vendors are available here.':''].filter(Boolean).join(' ');
- render();restore();if(pending?.blocked)status('Saved request data needs review. New changes are blocked.',true);else status(result.bills.length?'Payables loaded.':'No vendor bills in this data mode yet.');
+ render();restore();if(pending?.blocked)status('Saved request data needs review. New changes are blocked.',true);else status(result.bills.length?'':'No vendor bills in this data mode yet.');
  }catch(error){if(id===generation){q('#availability').textContent='';status(error.message,true);if(error.status===401){const a=el('a','Sign in');a.href=loginURL();q('#status').append(' ',a)}}}
 }
 function render(){

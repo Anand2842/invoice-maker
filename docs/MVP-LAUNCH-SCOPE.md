@@ -1,3 +1,5 @@
+> **Superseded on 8 November 2026.** This note is from 27 October and is out of date: payments, vendor bills, team access, financial statements and e-invoice practice mode now exist. The current status is in `PRODUCT-STATUS.md` and on the public Roadmap page (`/roadmap/`).
+
 # MVP scope and availability - 27 October 2026
 
 Release candidate for a controlled billing pilot, not a complete Refrens replica or a public-launch certification.
