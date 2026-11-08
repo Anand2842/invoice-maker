@@ -71,7 +71,16 @@ export default async function handler(req, res) {
     let body = null;
     if (hasBody) {
       const chunks = [];
+      let bytes = 0;
       for await (const chunk of req) {
+        bytes += Buffer.byteLength(chunk);
+        if (new URL(url).pathname.replace(/\\/$/, "") === "/mcp" && bytes > 100 * 1024) {
+          res.statusCode = 413;
+          res.setHeader("Content-Type", "application/json");
+          res.setHeader("Cache-Control", "no-store");
+          res.end(JSON.stringify({ error: "The MCP request exceeds 100 KB." }));
+          return;
+        }
         chunks.push(chunk);
       }
       body = Buffer.concat(chunks);
