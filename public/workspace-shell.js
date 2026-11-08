@@ -73,7 +73,9 @@ export async function signOut(userId){
  const{clearAccountDrafts,announceAuthChange}=await import('/drafts.js');
  await api('/api/auth',{method:'POST',body:JSON.stringify({action:'logout'})});
  if(userId){announceAuthChange(userId,'logout');await clearAccountDrafts(userId)}
- try{sessionStorage.removeItem('folio-guest-drafts');localStorage.removeItem('billing-active-business')}catch{}
+ try{sessionStorage.removeItem('folio-guest-drafts');localStorage.removeItem('billing-active-business');
+  // Unsent drafts of the new editor belong to the account that wrote them.
+  if(userId)for(const k of Object.keys(localStorage))if(k.startsWith('inbill-editor-v2:'+userId+':'))localStorage.removeItem(k)}catch{}
 }
 export function selectedBusiness(businesses){const explicit=new URLSearchParams(location.search).get('business'),selected=explicit||localStorage.getItem('billing-active-business'),b=businesses.find(b=>b.id===selected)||(!explicit?businesses[0]:null);if(explicit&&!b)throw Error('This business is unavailable to your account.');if(b)localStorage.setItem('billing-active-business',b.id);return b}
 syncSampleParam();brandHeader();addWorkspaceNav();paymentMethodSuggestions();

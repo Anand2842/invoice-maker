@@ -38,24 +38,23 @@ The rest of the app (workspace shell, books, payments, GST, overview, brand) is 
 
 Estimate: 2 to 3 weeks of focused work.
 
-## Status, 9 November 2026 (evening)
+## Status, 9 November 2026: COMPLETE
 
-A first working version of the new editor is built at **`/editor-next/?document=invoice`** (hidden from search, not linked from the menu). It lives in `public/editor/` and is written from scratch: `model.mjs` (state and rules, tested against the PDF engine), `gst-states.mjs`, `editor.js` (the page), `editor.css`. `tests/editor-clean-room.test.mjs` fails if anything from the captured editor appears in that folder.
+The rewrite is finished and switched over. `/free-online-invoice-generator/` (guests) and `/invoice-editor/` (signed in) both serve the new editor in `public/editor/` (`model.mjs`, `gst-states.mjs`, `editor.js`, `editor.css`, `index.html`). Everything captured from the other site is deleted.
 
-What it does today: document details (title, number, dates, payment terms, currency, logo), billed-by and billed-to with saved-client picker, items with HSN suggestions, per-line discount in rupees or percent, live totals with CGST+SGST or IGST chosen from the two GSTINs, amount in words, round-off, notes, terms, bank and signature, five PDF designs, preview and download, save to the account, number preview, restore of an unsent draft, plain-words validation that names and marks the first problem, and a phone layout. Totals were checked against figures worked by hand.
+| Slice | Result |
+| --- | --- |
+| E1 Header block | Title, number with next-in-series preview, issue date, payment terms and due date that follow each other, currency, logo. The false "due date" message is gone. |
+| E2 Parties | Billed by and to, saved client or vendor picker, GSTIN-driven state, plain address fields |
+| E3 Items and totals | HSN suggestions, per-line discount in rupees or percent, same discount on every line, cess column, custom item columns, live totals, amount in words, round-off, VAT or no tax, manual CGST+SGST or IGST override, place of supply, reverse charge, GST reporting details |
+| E4 Extras | Notes, terms, bank, signature, shipping, transport, extra fields, attachments, saved-item picker |
+| E5 Saved documents | Open by id; issued documents lock completely; sales-order conversions keep their reviewed lines and only notes, terms and design are editable; credit and debit notes lock the parties and require a reason; the Issue, Add to books and Cancel bar; Share & send; Convert to invoice and copy from a quotation; fields the editor does not show are handed back unchanged on save |
+| E6 Switch-over | Routes switched; `public/free-online-invoice-generator/`, the old shells, `hsn-picker.js`, `invoice-catalog.js` and three site-mirroring scripts deleted; the PDF engine's metadata no longer names another company; guard tests keep all of it gone |
 
-**Not in it yet, so the old editor stays the live one:**
-- E4/E5: shipping and transport details, custom fields, attachments, line groups, discount on the whole document, cess, columns and number-format dialogs, VAT.
-- Saved documents: the Issue, Add to books and Cancel bar (`document-actions.js`), locking after issue, opening a saved document by id with all its states, credit and debit note adjustments, quotation to invoice conversion, sales-order conversions.
-- A signed-in draft store and the "sample record" flow.
-- E6: switching `/free-online-invoice-generator/` and `/invoice-editor/` over, deleting the captured files and the old script, mobile pass.
+Checks: 17 model and guard tests (578 in the whole suite); real-browser runs against a stubbed backend for issued, credit-note, conversion, quotation-copy, saved-client and saved-item flows, VAT and cess, and the save payloads; all seven document types on the live routes; a real PDF built from the editor's output and the Preview dialog; the production build.
 
-Rough share of the old editor's behaviour now covered: about a third. Remaining: about 2 weeks.
+Not done, by design: the earlier editor's rich-text description box (a plain description field replaces it), its "groups" of lines and its column-formula dialog (neither was part of the saved document format). Not verified here: a live signed-in session against the real database, because the local sign-in was unavailable; the signed-in flows were verified against a stub of the API.
 
 ## Launch gate
 
-Do not promote the editor publicly (Product Hunt, directories, press) until E6 is done, or an IP lawyer has cleared the current files in writing. A private pilot with a handful of accountants carries less exposure but is not risk-free.
-
-## Known editor bug to fix in E1
-
-A fresh editor shows a red "Due date cannot be before the document date" although the default due date (Net 15) is later.
+The editor itself no longer carries anyone else's code. Remaining before public promotion: have a lawyer glance at the rest of the visual design and the privacy and terms drafts.

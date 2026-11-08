@@ -676,8 +676,8 @@ function serializePDF(layout, doc) {
   });
   objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>');
   const infoId = objects.length + 1;
-  objects.push(`<< /Title (${pdfEscape(winAnsi(`${doc.title} ${doc.number}`))}) /Author (${pdfEscape(winAnsi(doc.seller.name))}) /Creator (Refrens local document export) /Producer (Browser-local PDF writer) >>`);
-  let output = '%PDF-1.4\n%Refrens local document export\n';
+  objects.push(`<< /Title (${pdfEscape(winAnsi(`${doc.title} ${doc.number}`))}) /Author (${pdfEscape(winAnsi(doc.seller.name))}) /Creator (inbill document export) /Producer (Browser-local PDF writer) >>`);
+  let output = '%PDF-1.4\n%inbill document export\n';
   const offsets = [0];
   objects.forEach((object, index) => { offsets.push(output.length); output += `${index + 1} 0 obj\n${object}\nendobj\n`; });
   const startXref = output.length;
@@ -733,8 +733,8 @@ async function serializeUnicodePDF(layout, doc, context) {
     put(pageId + 1, await stream('', pdfAscii(`${layout.pages[index].join('\n')}\n`)));
   }
   const infoId = nextId++;
-  put(infoId, `<< /Title ${pdfUnicodeString(`${doc.title} ${doc.number}`)} /Author ${pdfUnicodeString(doc.seller.name)} /Creator (Refrens local document export) /Producer (Browser-local PDF writer) >>`);
-  const parts = [pdfAscii('%PDF-1.4\n%Refrens local document export\n')], offsets = [0];
+  put(infoId, `<< /Title ${pdfUnicodeString(`${doc.title} ${doc.number}`)} /Author ${pdfUnicodeString(doc.seller.name)} /Creator (inbill document export) /Producer (Browser-local PDF writer) >>`);
+  const parts = [pdfAscii('%PDF-1.4\n%inbill document export\n')], offsets = [0];
   let length = parts[0].length;
   for (let index = 0; index < objects.length; index++) {
     offsets.push(length);
@@ -801,7 +801,7 @@ export async function preview(input, onTemplateChange) {
   let result = await buildWithImages(input);
   let url = URL.createObjectURL(new Blob([result.bytes], { type: result.mime }));
   const dialog = document.createElement('dialog');
-  dialog.className = 'refrens-document-preview';
+  dialog.className = 'inbill-document-preview';
   dialog.setAttribute('aria-label', 'PDF document preview');
   dialog.style.cssText = 'box-sizing:border-box;margin:auto;inset:0;width:min(1100px,96vw);max-width:96vw;max-height:95vh;padding:20px;border:1px solid #dbe8e7;border-radius:12px;background:white;color:#042f2e;box-shadow:0 20px 70px #0004;';
   const toolbar = document.createElement('div');
