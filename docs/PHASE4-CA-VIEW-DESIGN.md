@@ -1,6 +1,6 @@
 # Phase 4: CA view and client invites (design for approval, 8 Nov 2026)
 
-Status: proposal. Nothing here is built. Stage A needs no database change. Stage B needs one and waits for the owner's approval.
+Status (9 Nov 2026): the owner delegated the decisions. Chosen: the accountant gets **admin**, the overview is capped at **50** businesses, the menu item is **"All businesses"**, Stage B is approved to build. Stage A (screen and API) and Stage B (client links, with its migration `202611090001_ca_invites.sql`) are built and tested on branch `brand-inbill-teal`. **The migration is not applied to the live database and nothing is deployed;** that waits for the owner's explicit go-ahead. Differences from the proposal: the screen shows Drafts instead of "Last activity" (the dashboard figures do not carry an activity time), and the overdue sort ranks by number of invoices first so rupee and dollar amounts are never compared.
 
 ## Goal
 

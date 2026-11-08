@@ -21,3 +21,8 @@ h1{margin:0;font-size:clamp(28px,4vw,38px)}
 .actions a{color:#115e59}.actions .open{background:#115e59;color:#fff;border-radius:7px;padding:8px 16px;text-decoration:none;font-weight:600}
 .note{margin:0;font-size:14px;color:#7a4f00}.error{color:#a02140;margin:0}
 [role=status] a{margin-left:.6em}
+.invite{display:grid;gap:12px;border-top:1px solid #d9e6e5;padding-top:24px;max-width:760px}
+.invite h2{margin:0}.invite .primary{justify-self:start;background:#115e59;color:#fff;border:0;border-radius:7px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer}
+.link-box{display:flex;flex-wrap:wrap;gap:8px;align-items:end}.link-box label{display:grid;gap:4px;flex:1 1 320px;font-size:14px}.link-box input{font:inherit;padding:9px 10px;border:1px solid #c5dddc;border-radius:7px;background:#fff;width:100%;box-sizing:border-box}
+.link-box button,.invites button{font:inherit;border:1px solid #115e59;background:#fff;color:#115e59;border-radius:7px;padding:8px 14px;cursor:pointer}
+.invites{list-style:none;margin:0;padding:0;display:grid;gap:8px}.invites li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;font-size:14px;color:#4b5f60}

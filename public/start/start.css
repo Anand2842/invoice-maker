@@ -30,3 +30,7 @@
 .start-list a{white-space:nowrap;font-weight:600;color:#0f766e}
 .start-list li[data-done=true] a{color:#2f7a52;font-weight:500}
 @media (max-width:520px){.start-list li{grid-template-columns:28px minmax(0,1fr)}.start-list a{grid-column:2}}
+#ca-consent{border-color:#99f6e4;background:#f0fdfa}
+#ca-consent .ca-check{display:flex;flex-direction:row;gap:10px;align-items:center;font:600 16px 'Folio Sans',system-ui,sans-serif;color:#042f2e}
+#ca-consent .ca-check input{width:auto;margin:0;flex:none}
+#ca-consent .start-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:end}

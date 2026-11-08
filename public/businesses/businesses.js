@@ -70,4 +70,27 @@ async function load(){
  totals();render();
 }
 for(const id of['#search','#sort','#only-overdue'])q(id).addEventListener('input',()=>data&&render());
-load();
+
+// Client links: the accountant makes a link, sends it themselves (nothing is emailed), and sees which have been used.
+const when=d=>new Intl.DateTimeFormat('en-IN',{day:'numeric',month:'short',year:'numeric'}).format(new Date(d));
+async function inviteApi(body){const r=await fetch('/api/ca-invites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'That did not work. Try again.');return d}
+async function loadInvites(){
+ const list=q('#invites');
+ try{
+  const r=await fetch('/api/ca-invites');if(!r.ok)return;const{invites}=await r.json();list.replaceChildren();
+  for(const i of invites){
+   const li=el('li'),expired=!i.usedAt&&!i.revokedAt&&new Date(i.expiresAt)<=new Date();
+   const label=i.usedAt?'Used'+(i.business?' · '+i.business:'')+' · '+when(i.usedAt):i.revokedAt?'Revoked':expired?'Expired '+when(i.expiresAt):'Open · expires '+when(i.expiresAt);
+   li.append(el('span','Link made '+when(i.createdAt)+' · '+label));
+   if(!i.usedAt&&!i.revokedAt&&!expired){const b=el('button','Revoke');b.type='button';b.addEventListener('click',async()=>{b.disabled=true;try{await inviteApi({action:'revoke',invite:i.id});await loadInvites()}catch(e){q('#link-note').textContent=e.message;b.disabled=false}});li.append(b)}
+   list.append(li);
+  }
+ }catch{}
+}
+q('#make-link').addEventListener('click',async()=>{
+ const btn=q('#make-link');btn.disabled=true;q('#link-note').textContent='';
+ try{const d=await inviteApi({action:'create'});q('#link-url').value=d.link;q('#link-box').hidden=false;q('#link-note').textContent=d.message;await loadInvites()}
+ catch(e){q('#link-note').textContent=e.message}finally{btn.disabled=false}
+});
+q('#copy-link').addEventListener('click',async()=>{const input=q('#link-url');try{await navigator.clipboard.writeText(input.value);q('#link-note').textContent='Copied. Send it to your client.'}catch{input.select();q('#link-note').textContent='Press Ctrl+C or Cmd+C to copy.'}});
+load().then(()=>{if(data){q('#invite').hidden=false;loadInvites()}});
