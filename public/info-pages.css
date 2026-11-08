@@ -10,3 +10,8 @@
 .tag.ok{background:#e1f3e8;color:#1f6b45}.tag.basic{background:#e7f8f7;color:#115e59}.tag.practice{background:#fdf3dc;color:#7a4f00}.tag.soon{background:#ecebf0;color:#4b4f55}
 .info .note{font-size:13px;color:#5b6b6c}
 .site-header nav{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.draft-note{background:#fdf3dc;border:1px solid #efd9a0;border-radius:10px;padding:12px 16px;margin:0;max-width:70ch;color:#5c3d00}
+.operator{display:grid;gap:8px;margin:0;max-width:70ch}.operator div{display:grid;grid-template-columns:200px 1fr;gap:12px}.operator dt{font-weight:600}.operator dd{margin:0;color:#7a4f00}
+.legal-links{margin-inline:auto 18px;font-size:14px}.legal-links a{color:inherit}
+.info code{font:13px ui-monospace,monospace;background:#eef2f2;padding:1px 5px;border-radius:4px}
+@media (max-width:640px){.operator div{grid-template-columns:1fr;gap:2px}}
