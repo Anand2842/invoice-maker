@@ -36,7 +36,21 @@ The rest of the app (workspace shell, books, payments, GST, overview, brand) is 
 | E5 | Dialogs: columns, tax, discount, number format | All dialogs keyboard and screen-reader usable |
 | E6 | Remove captured files; guard test; mobile pass | `public/` has no captured file; tests pass |
 
-Estimate: 2 to 3 weeks of focused work. Not started beyond the clean-up and this plan.
+Estimate: 2 to 3 weeks of focused work.
+
+## Status, 9 November 2026 (evening)
+
+A first working version of the new editor is built at **`/editor-next/?document=invoice`** (hidden from search, not linked from the menu). It lives in `public/editor/` and is written from scratch: `model.mjs` (state and rules, tested against the PDF engine), `gst-states.mjs`, `editor.js` (the page), `editor.css`. `tests/editor-clean-room.test.mjs` fails if anything from the captured editor appears in that folder.
+
+What it does today: document details (title, number, dates, payment terms, currency, logo), billed-by and billed-to with saved-client picker, items with HSN suggestions, per-line discount in rupees or percent, live totals with CGST+SGST or IGST chosen from the two GSTINs, amount in words, round-off, notes, terms, bank and signature, five PDF designs, preview and download, save to the account, number preview, restore of an unsent draft, plain-words validation that names and marks the first problem, and a phone layout. Totals were checked against figures worked by hand.
+
+**Not in it yet, so the old editor stays the live one:**
+- E4/E5: shipping and transport details, custom fields, attachments, line groups, discount on the whole document, cess, columns and number-format dialogs, VAT.
+- Saved documents: the Issue, Add to books and Cancel bar (`document-actions.js`), locking after issue, opening a saved document by id with all its states, credit and debit note adjustments, quotation to invoice conversion, sales-order conversions.
+- A signed-in draft store and the "sample record" flow.
+- E6: switching `/free-online-invoice-generator/` and `/invoice-editor/` over, deleting the captured files and the old script, mobile pass.
+
+Rough share of the old editor's behaviour now covered: about a third. Remaining: about 2 weeks.
 
 ## Launch gate
 

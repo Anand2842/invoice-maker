@@ -3,7 +3,7 @@ import { sourceAllocation, validateOrderConversion } from './source-allocation.m
 import { parseFont, makeToUnicode, hexText } from './pdf-font.js';
 /**
  * Dependency-free, local PDF export. Import this module once before calling
- * window.RefrensDocumentExport.{build,download,preview}(document).
+ * window.InbillDocumentExport.{build,download,preview}(document).
  *
  * Money is rounded half-up to cents after each line, discount and tax. A fixed
  * item discount is an absolute line discount; percentage discounts use the
@@ -851,9 +851,9 @@ export async function preview(input, onTemplateChange) {
   return { ...result, dialog, close: () => dialog.close() };
 }
 
-export const RefrensDocumentExport = Object.freeze({ build, buildWithImages, download, preview, escapeHTML, boundaries });
-if (typeof window !== 'undefined') window.RefrensDocumentExport = RefrensDocumentExport;
-export default RefrensDocumentExport;
+export const InbillDocumentExport = Object.freeze({ build, buildWithImages, download, preview, escapeHTML, boundaries });
+if (typeof window !== 'undefined') window.InbillDocumentExport = InbillDocumentExport;
+export default InbillDocumentExport;
 
 function imageSource(value) {
   if (!value) return null;
