@@ -1,4 +1,5 @@
 // One-click sample business. Everything is written with demo=true through the same APIs the screens use, so it
+import{startBooks}from'/books-setup.js';
 // follows the same rules (issuing, payments, bills, books) and never touches the owner's real records.
 import {api} from '/workspace-shell.js';
 
@@ -43,11 +44,8 @@ export async function seedSampleBusiness(business,progress=()=>{}){
 
  progress('Setting up sample books…');
  const start=(()=>{const d=new Date();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()-2);return iso(d)})();
- try{await post('/api/ledger',{action:'setup',business,demo:true,date:start})}catch(e){if(!/already|exists/i.test(e.message))throw e}
- const ledger=await api('/api/ledger?'+new URLSearchParams({business,demo:'true',from:start,to:daysAgo(0)}));
- const acct=code=>(ledger.accounts||[]).find(a=>a.code===code)?.id;
+ const{ledger,acct}=await startBooks(api,{business,demo:true,start,today:daysAgo(0)});
  // Sample invoices and receipts post to the sample books, so Books shows sales next to the dashboard figures.
- try{await post('/api/accounting/sources',{business,demo:true,reviewed:true,date:start,accounts:{receivable:acct('1100'),income:acct('4000'),tax:acct('2100'),cash:acct('1000'),rounding:acct('4900')}})}catch(e){if(!/already|exists|configured|immutable/i.test(e.message))throw e}
 
  progress('Creating and issuing sample invoices…');
  const seller={name:b.name,email:b.email||'',phone:b.phone||'',address:b.address||'',gstin:b.gstin||'',panNumber:b.pan||''};

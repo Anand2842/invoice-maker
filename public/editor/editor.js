@@ -7,7 +7,7 @@ import{GST_STATES}from'/editor/gst-states.mjs';
 
 const params=new URLSearchParams(location.search),wanted=params.get('document')||'invoice',type=DOC_TYPES[wanted]?wanted:'invoice',sample=sampleMode();
 const root=document.querySelector('#editor'),exportModule=import('/document-export.js');
-let s,user=null,business=null,record=null,numberPreview='',loading=false,saving=false,pending=false,hsn=null,clients=[],savedItems=[],lifecycle=null,showCess=false;
+let s,user=null,business=null,record=null,numberPreview='',loading=false,saving=false,pending=false,hsn=null,clients=[],savedItems=[],lifecycle=null,showCess=false,rememberClient=true;
 const draftKey=()=>'inbill-editor-v2:'+(user?.id||'guest')+':'+type;
 const bound=[]; // inputs kept in step with the state
 
@@ -97,7 +97,7 @@ function clientPicker(){
  const sel=h('select',{'aria-label':'Choose a saved '+label},h('option',{value:'',text:user?(clients.length?'Choose a saved '+label:'No saved '+label+'s yet'):'Sign in to use saved '+label+'s'}),clients.map(c=>h('option',{value:c.id,text:c.data.name})));
  sel.disabled=!user||!clients.length;
  sel.addEventListener('change',()=>{const c=clients.find(x=>x.id===sel.value);if(!c)return;const d=c.data;s.clientId=c.id;s.buyer={...s.buyer,name:d.name||'',email:d.email||'',phone:d.phone||'',gstin:d.gstin||'',street:d.address||d.street||'',city:d.city||'',pincode:d.pincode||''};autoGst(s);syncInputs();paintTotals();paintGst();saveDraftSoon()});
- return h('div',{class:'picker'},sel);
+ return h('div',{class:'picker'},sel,user&&business&&!isIssued(s)?h('label',{class:'field check remember'},(()=>{const c=h('input',{type:'checkbox'});c.checked=rememberClient;c.addEventListener('change',()=>{rememberClient=c.checked});return c})(),h('span',{text:'Save this '+label+' for next time'})):null);
 }
 function itemsCard(){
  const body=h('div',{class:'items',id:'items'});
@@ -250,10 +250,20 @@ async function output(kind){
   else await m.preview(doc,t=>{s.template=t;const sel=root.querySelector('.toolbar select[aria-label="PDF design"]');if(sel)sel.value=t;saveDraftSoon()});
  }catch(e){say(e.message,true)}
 }
+// A client typed in by hand becomes a saved client (or is matched to one already saved), so the invoice is linked to it.
+async function ensureClient(){
+ if(!rememberClient||s.clientId||!s.buyer.name.trim()||s.source||OPEN_ONLY_TYPES.includes(s.type))return;
+ const b=s.buyer,name=b.name.trim().toLowerCase(),gstin=(b.gstin||'').trim().toUpperCase();
+ const match=clients.find(c=>(gstin&&String(c.data.gstin||'').toUpperCase()===gstin)||String(c.data.name||'').trim().toLowerCase()===name);
+ if(match){s.clientId=match.id;return}
+ const address=[b.street,b.city,b.gstState,b.pincode].filter(Boolean).join(', ');
+ const r=await api('/api/records',{method:'POST',body:JSON.stringify({business:business.id,collection:type==='purchase-order'?'vendors':'clients',demo:sample,data:{name:b.name.trim(),email:b.email||'',phone:b.phone||'',address,gstin}})});
+ s.clientId=r.record.id;clients.push(r.record);
+}
 async function save({quiet=false}={}){
  if(isIssued(s))return record;
  if(saving||!checked())return null;saving=true;if(!quiet)say('Saving…');
- try{const data=toDocument(s);(await exportModule).calculate({...data,dueDate:data.dueDate});if(!record&&numberPreview&&data.number===numberPreview)data.numberAuto=true;
+ try{await ensureClient();const data=toDocument(s);(await exportModule).calculate({...data,dueDate:data.dueDate});if(!record&&numberPreview&&data.number===numberPreview)data.numberAuto=true;
   const payload={business:business.id,collection:'documents',demo:sample,data,...(record?{id:record.id,version:record.version}:{})};
   const r=await api('/api/records',{method:record?'PATCH':'POST',body:JSON.stringify(payload)});record=r.record;if(record.data?.number&&record.data.number!==s.number){s.number=record.data.number;syncInputs()}
   if(record.data?.extra)s.extra=record.data.extra;numberPreview='';try{localStorage.removeItem(draftKey())}catch{}

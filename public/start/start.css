@@ -34,3 +34,6 @@
 #ca-consent .ca-check{display:flex;flex-direction:row;gap:10px;align-items:center;font:600 16px 'Folio Sans',system-ui,sans-serif;color:#042f2e}
 #ca-consent .ca-check input{width:auto;margin:0;flex:none}
 #ca-consent .start-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.start-list button{white-space:nowrap;font:600 14px inherit;color:#fff;background:#115e59;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}.start-list button:disabled{opacity:.6;cursor:wait}
+.start-list button[hidden]{display:none}
+@media (max-width:520px){.start-list button{grid-column:2;justify-self:start}}

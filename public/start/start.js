@@ -1,4 +1,6 @@
 import {api,selectedBusiness,setSampleMode} from '/workspace-shell.js';
+import {startBooks,booksOn,fiscalYearStart} from '/books-setup.js';
+import {businessDate} from '/business-date.js';
 
 const q=s=>document.querySelector(s);
 const STATES={'01':'Jammu and Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh','05':'Uttarakhand','06':'Haryana','07':'Delhi','08':'Rajasthan','09':'Uttar Pradesh','10':'Bihar','11':'Sikkim','12':'Arunachal Pradesh','13':'Nagaland','14':'Manipur','15':'Mizoram','16':'Tripura','17':'Meghalaya','18':'Assam','19':'West Bengal','20':'Jharkhand','21':'Odisha','22':'Chhattisgarh','23':'Madhya Pradesh','24':'Gujarat','26':'Dadra and Nagar Haveli and Daman and Diu','27':'Maharashtra','29':'Karnataka','30':'Goa','31':'Lakshadweep','32':'Kerala','33':'Tamil Nadu','34':'Puducherry','35':'Andaman and Nicobar Islands','36':'Telangana','37':'Andhra Pradesh','38':'Ladakh','97':'Other Territory'};
@@ -31,9 +33,11 @@ function wireBusinessForm(onSaved){
 async function count(business,collection,filter=()=>true){const r=await api('/api/records?'+new URLSearchParams({business,collection,demo:'false',limit:'200'}));return r.records.filter(filter).length}
 
 async function checklist(business){
- const [clients,items,issued,payments]=await Promise.all([count(business.id,'clients'),count(business.id,'items'),count(business.id,'documents',r=>r.data.type==='invoice'&&r.data.lifecycle),count(business.id,'payments')]);
+ const today=businessDate(new Date(),business.time_zone||'Asia/Kolkata'),start=fiscalYearStart(today);
+ const [clients,items,issued,payments,books]=await Promise.all([count(business.id,'clients'),count(business.id,'items'),count(business.id,'documents',r=>r.data.type==='invoice'&&r.data.lifecycle),count(business.id,'payments'),booksOn(api,business.id,today)]);
  const steps=[
   {done:Boolean(business.gstin||business.address),title:'Add your business details',hint:'Name, GSTIN, address and bank details print on every invoice.',href:'/settings/',cta:'Open settings'},
+  {done:books,title:'Turn on your books',hint:'inbill will record every invoice you issue and every payment in your books by itself, using the standard accounts (Receivables, Sales, GST payable, Cash), from '+new Date(start+'T00:00:00Z').toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})+'. You can review and change the accounts in Books.',cta:'Turn on books',action:async()=>{await startBooks(api,{business:business.id,start,today})}},
   {done:clients>0,title:'Add your first client',hint:'Save a client once and pick them on every invoice.',href:'/services/?service=clients',cta:'Add a client'},
   {done:items>0,title:'Add an item you sell',hint:'Price, HSN/SAC code and GST rate fill in automatically.',href:'/services/?service=inventory',cta:'Add an item'},
   {done:issued>0,title:'Create and issue your first invoice',hint:'Issue it when it is final; then it counts as money to collect.',href:'/free-online-invoice-generator/?document=invoice&fresh=true',cta:'Create invoice'},
@@ -41,8 +45,11 @@ async function checklist(business){
  const done=steps.filter(s=>s.done).length;
  q('#progress-text').textContent=done===steps.length?'All done. Your billing is set up.':done+' of '+steps.length+' done';q('#progress-bar').style.width=(done/steps.length*100)+'%';
  q('#checklist').replaceChildren(...steps.map(s=>{const li=document.createElement('li');li.dataset.done=String(s.done);
-  li.innerHTML='<span class="start-check" aria-hidden="true">'+(s.done?'✓':'')+'</span><div><strong></strong><span class="start-hint"></span></div><a></a>';
-  li.querySelector('strong').textContent=s.title+(s.done?' (done)':'');li.querySelector('.start-hint').textContent=s.hint;const a=li.querySelector('a');a.href=s.href;a.textContent=s.done?'Open':s.cta;return li}));
+  li.innerHTML='<span class="start-check" aria-hidden="true">'+(s.done?'✓':'')+'</span><div><strong></strong><span class="start-hint"></span></div><a></a><button type="button" hidden></button>';
+  li.querySelector('strong').textContent=s.title+(s.done?' (done)':'');li.querySelector('.start-hint').textContent=s.hint;const a=li.querySelector('a'),btn=li.querySelector('button');
+  if(s.action&&!s.done){a.hidden=true;btn.hidden=false;btn.textContent=s.cta;btn.addEventListener('click',async()=>{btn.disabled=true;btn.textContent='Turning on…';try{await s.action();await checklist(business)}catch(e){btn.disabled=false;btn.textContent=s.cta;status(e.message,true)}})}
+  else{if(s.action){a.href='/accounting/';a.textContent='Open books'}else{a.href=s.href;a.textContent=s.done?'Open':s.cta}}
+  return li}));
 }
 
 q('#sample-button').addEventListener('click',async e=>{const b=e.currentTarget,s=q('#sample-status');b.disabled=true;
