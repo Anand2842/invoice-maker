@@ -1,7 +1,10 @@
 import{plainErrorBody}from'./plain-errors.mjs';
 // Only the publishable key is needed at runtime. User JWTs keep RLS active.
-export const SUPABASE_URL='https://digewoxoqblxlfnekjmc.supabase.co';
-export const SUPABASE_KEY='sb_publishable_LpqjFoIBeIsyExLv9mF2zQ_60GTF8tr';
+// Local testing (docs/LOCAL-TESTING.md) points these at a Supabase on this computer. The override is honoured only for a
+// localhost address, so no setting can ever redirect the real site to another server.
+const localOverride=(()=>{try{const url=typeof process!=='undefined'?process.env?.INBILL_SUPABASE_URL:'';if(!url)return null;const host=new URL(url).hostname;return host==='127.0.0.1'||host==='localhost'?{url:url.replace(/\/$/,''),key:process.env?.INBILL_SUPABASE_KEY||'local'}:null}catch{return null}})();
+export const SUPABASE_URL=localOverride?.url||'https://digewoxoqblxlfnekjmc.supabase.co';
+export const SUPABASE_KEY=localOverride?.key||'sb_publishable_LpqjFoIBeIsyExLv9mF2zQ_60GTF8tr';
 export const json=(data:unknown,status=200)=>Response.json(status>=400?plainErrorBody(data):data,{status,headers:{'Cache-Control':'no-store'}});
 export function originAllowed(req:Request){const origin=req.headers.get('origin');return !origin||origin===new URL(req.url).origin;}
 export function token(req:Request){const cookie=req.headers.get('cookie')||'';return cookie.split(';').map(x=>x.trim()).find(x=>x.startsWith('billing_access='))?.slice(15)||'';}
